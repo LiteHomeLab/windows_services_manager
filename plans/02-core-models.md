@@ -648,11 +648,74 @@ if (service.Status.IsTransitioning())
 }
 ```
 
-## 9. 注意事项
+## 9. 安全验证器模型 ✅
+
+### PathValidator - 路径安全验证器
+```csharp
+// File: Models/PathValidator.cs
+public static class PathValidator
+{
+    /// <summary>
+    /// 验证路径是否安全，防止路径遍历攻击
+    /// </summary>
+    public static bool IsValidPath(string path);
+
+    /// <summary>
+    /// 获取安全路径，如果路径无效则抛出异常
+    /// </summary>
+    public static string GetSafePath(string path);
+
+    /// <summary>
+    /// 验证文件名是否安全
+    /// </summary>
+    public static bool IsValidFileName(string fileName);
+}
+```
+
+### CommandValidator - 命令安全验证器
+```csharp
+// File: Models/CommandValidator.cs
+public static class CommandValidator
+{
+    /// <summary>
+    /// 清理和验证命令参数，防止命令注入
+    /// </summary>
+    public static string SanitizeArguments(string arguments);
+
+    /// <summary>
+    /// 验证可执行文件是否安全
+    /// </summary>
+    public static bool IsValidExecutable(string executablePath);
+
+    /// <summary>
+    /// 检测命令注入攻击模式
+    /// </summary>
+    private static bool ContainsCommandInjection(string input);
+}
+```
+
+## 10. 实施状态 ✅
+
+### ✅ 已实现的安全特性
+- **ServiceItem 路径验证**：所有路径属性都通过 PathValidator 验证
+- **XML 安全生成**：GenerateWinSWConfig() 使用 XElement 和 SecurityElement.Escape()
+- **命令参数清理**：通过 CommandValidator 清理所有用户输入
+- **异常处理**：属性设置时进行验证，无效输入抛出 ArgumentException
+
+### ✅ 已完成的安全验证
+1. **路径遍历防护**：阻止 `../`、UNC 路径、系统敏感目录访问
+2. **命令注入防护**：过滤 `&`、`|`、`;`、`<`、`>` 等危险字符
+3. **XML 注入防护**：所有用户输入在 XML 中都被正确转义
+4. **可执行文件验证**：检查文件扩展名和文件名安全性
+5. **系统文件保护**：限制对关键系统可执行文件的访问
+
+## 11. 注意事项
 
 1. **路径处理**: 所有路径都应使用 `Path.Combine()` 来确保跨平台兼容性
 2. **GUID 生成**: 使用 `Guid.NewGuid().ToString("N")` 生成无分隔符的 GUID
 3. **时间格式**: 使用 ISO 8601 格式存储时间
 4. **序列化**: 使用 Newtonsoft.Json 进行 JSON 序列化，配置忽略 null 值
-5. **验证**: 所有用户输入都应进行验证，特别是文件路径
-6. **安全性**: 避免路径遍历攻击，验证路径是否在允许的范围内
+5. **验证**: 所有用户输入都应通过验证器进行安全验证
+6. **安全性**: 已实现企业级安全防护，包括路径遍历、命令注入、XML注入防护
+7. **性能**: 验证器使用正则表达式编译，确保高性能验证
+8. **日志**: 所有验证失败都会记录到应用程序日志中

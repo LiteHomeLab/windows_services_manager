@@ -17,6 +17,7 @@
 | [06-logging-system.md](06-logging-system.md) | 日志查看和监控功能 |
 | [07-testing-strategy.md](07-testing-strategy.md) | 测试计划和测试用例 |
 | [08-deployment-guide.md](08-deployment-guide.md) | 应用程序打包和部署 |
+| [09-security-implementation.md](09-security-implementation.md) | 安全实施报告和漏洞修复 |
 
 ## 技术栈
 
@@ -25,6 +26,9 @@
 - **核心依赖**: WinSW v3.0+ (Windows Service Wrapper)
 - **数据存储**: JSON 文件
 - **权限要求**: 管理员权限
+- **安全特性**: 企业级安全防护（路径验证、命令清理、XML安全生成）
+- **日志框架**: Microsoft.Extensions.Logging
+- **依赖注入**: Microsoft.Extensions.DependencyInjection
 
 ## 核心功能
 
@@ -32,6 +36,8 @@
 2. **服务控制** - 启动、停止、重启、卸载服务
 3. **日志查看** - 实时查看服务运行日志
 4. **服务管理** - 管理所有通过本工具创建的服务
+5. **安全防护** - 企业级安全措施，防止各种攻击
+6. **资源管理** - 内存泄漏防护和并发控制
 
 ## 开发阶段
 

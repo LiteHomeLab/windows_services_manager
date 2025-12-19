@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path . -Recurse -Exclude \".git\")",
+      "Bash(Where-Object { $_ode -match \"d\" })",
+      "Bash(Select-Object FullName)",
+      "Bash(dotnet build:*)",
+      "Bash(tree:*)"
+    ]
+  }
+}
