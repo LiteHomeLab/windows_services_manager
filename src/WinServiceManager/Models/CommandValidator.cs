@@ -261,5 +261,49 @@ namespace WinServiceManager.Models
 
             return args;
         }
+
+        /// <summary>
+        /// Validates and sanitizes user input for use in command arguments
+        /// </summary>
+        /// <param name="input">The input to validate and sanitize</param>
+        /// <returns>Sanitized input string</returns>
+        public static string SanitizeInput(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return string.Empty;
+
+            // Use the existing SanitizeArguments method
+            try
+            {
+                return SanitizeArguments(input);
+            }
+            catch
+            {
+                // If sanitization fails, return empty string for safety
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Validates if input is safe to use in command arguments
+        /// </summary>
+        /// <param name="input">The input to validate</param>
+        /// <returns>True if the input is safe, false otherwise</returns>
+        public static bool IsValidInput(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return false;
+
+            try
+            {
+                // Try to sanitize - if it throws exception, input is invalid
+                SanitizeArguments(input);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 }

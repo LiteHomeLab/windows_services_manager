@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
 
@@ -50,6 +51,31 @@ namespace WinServiceManager.Models
         /// 创建后是否自动启动服务
         /// </summary>
         public bool AutoStart { get; set; } = true;
+
+        /// <summary>
+        /// 依赖的服务ID列表
+        /// </summary>
+        public List<string> Dependencies { get; set; } = new();
+
+        /// <summary>
+        /// 环境变量键值对
+        /// </summary>
+        public Dictionary<string, string> EnvironmentVariables { get; set; } = new();
+
+        /// <summary>
+        /// 服务账户
+        /// </summary>
+        public string? ServiceAccount { get; set; }
+
+        /// <summary>
+        /// 启动模式
+        /// </summary>
+        public string StartMode { get; set; } = "Automatic";
+
+        /// <summary>
+        /// 停止超时时间（毫秒）
+        /// </summary>
+        public int StopTimeout { get; set; } = 15000;
     }
 
     /// <summary>

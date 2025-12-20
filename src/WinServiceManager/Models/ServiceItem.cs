@@ -1,14 +1,19 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security;
 using System.Xml.Linq;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using WinServiceManager.ViewModels;
 
 namespace WinServiceManager.Models
 {
     /// <summary>
     /// 表示一个通过 WinServiceManager 创建的服务
     /// </summary>
-    public class ServiceItem
+    public class ServiceItem : BaseViewModel
     {
         /// <summary>
         /// 服务的唯一标识符 (GUID)
@@ -95,6 +100,77 @@ namespace WinServiceManager.Models
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
         /// <summary>
+        /// 依赖的服务列表（服务ID）
+        /// </summary>
+        public List<string> Dependencies { get; set; } = new List<string>();
+
+        /// <summary>
+        /// 环境变量键值对
+        /// </summary>
+        public Dictionary<string, string> EnvironmentVariables { get; set; } = new Dictionary<string, string>();
+
+        /// <summary>
+        /// 是否被选中为依赖服务（用于UI选择）
+        /// </summary>
+        private bool _isSelected = false;
+
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set => SetProperty(ref _isSelected, value);
+        }
+
+        /// <summary>
+        /// 启动参数（别名为Arguments，用于导出兼容性）
+        /// </summary>
+        public string StartupArguments => Arguments;
+
+        /// <summary>
+        /// 服务账户
+        /// </summary>
+        public string? ServiceAccount { get; set; }
+
+        /// <summary>
+        /// 环境变量（别名为EnvironmentVariables，用于导出兼容性）
+        /// </summary>
+        public Dictionary<string, string> Environment => EnvironmentVariables;
+
+        /// <summary>
+        /// 日志路径
+        /// </summary>
+        public string LogPath => LogDirectory;
+
+        /// <summary>
+        /// 日志模式
+        /// </summary>
+        public string LogMode { get; set; } = "roll-by-size";
+
+        /// <summary>
+        /// 启动模式
+        /// </summary>
+        public string StartMode { get; set; } = "Automatic";
+
+        /// <summary>
+        /// 停止超时时间（毫秒）
+        /// </summary>
+        public int StopTimeout { get; set; } = 15000;
+
+        /// <summary>
+        /// 进程优先级
+        /// </summary>
+        public string Priority { get; set; } = "Normal";
+
+        /// <summary>
+        /// 进程亲和性
+        /// </summary>
+        public int? Affinity { get; set; }
+
+        /// <summary>
+        /// 元数据
+        /// </summary>
+        public Dictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
+
+        /// <summary>
         /// 服务目录路径
         /// </summary>
         public string ServiceDirectory => Path.Combine(
@@ -170,12 +246,54 @@ namespace WinServiceManager.Models
                     new XElement("executable", SecurityElement.Escape(ExecutablePath)),
                     new XElement("arguments", SecurityElement.Escape(GetFullArguments())),
                     new XElement("workingdirectory", SecurityElement.Escape(WorkingDirectory)),
-                    new XElement("log", new XAttribute("mode", "roll-by-size"),
+                    new XElement("log", new XAttribute("mode", LogMode),
                         new XElement("sizeThreshold", 10240),
                         new XElement("keepFiles", 8)
                     ),
                     new XElement("stopparentprocessfirst", true)
                 );
+
+                // 添加依赖服务
+                if (Dependencies.Any())
+                {
+                    var dependenciesElement = new XElement("dependencies");
+                    foreach (var dependency in Dependencies)
+                    {
+                        dependenciesElement.Add(new XElement("service", SecurityElement.Escape(dependency)));
+                    }
+                    serviceElement.Add(dependenciesElement);
+                }
+
+                // 添加环境变量
+                if (EnvironmentVariables.Any())
+                {
+                    var envElement = new XElement("env");
+                    foreach (var envVar in EnvironmentVariables)
+                    {
+                        envElement.Add(new XElement("variable",
+                            new XAttribute("name", SecurityElement.Escape(envVar.Key)),
+                            new XAttribute("value", SecurityElement.Escape(envVar.Value))
+                        ));
+                    }
+                    serviceElement.Add(envElement);
+                }
+
+                // 添加服务账户
+                if (!string.IsNullOrEmpty(ServiceAccount))
+                {
+                    serviceElement.Add(new XElement("serviceaccount",
+                        new XAttribute("accountName", SecurityElement.Escape(ServiceAccount))
+                    ));
+                }
+
+                // 添加启动模式
+                if (!string.IsNullOrEmpty(StartMode) && StartMode != "Automatic")
+                {
+                    serviceElement.Add(new XElement("startmode", SecurityElement.Escape(StartMode)));
+                }
+
+                // 添加停止超时
+                serviceElement.Add(new XElement("stoptimeout", StopTimeout));
 
                 var doc = new XDocument(
                     new XDeclaration("1.0", "utf-8", null),

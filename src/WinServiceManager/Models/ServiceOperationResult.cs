@@ -76,4 +76,49 @@ namespace WinServiceManager.Models
         Update,
         QueryStatus
     }
+
+    /// <summary>
+    /// 带数据的服务操作结果
+    /// </summary>
+    /// <typeparam name="T">数据类型</typeparam>
+    public class ServiceOperationResult<T> : ServiceOperationResult
+    {
+        /// <summary>
+        /// 操作返回的数据
+        /// </summary>
+        public T? Data { get; set; }
+
+        /// <summary>
+        /// 创建成功结果
+        /// </summary>
+        public static ServiceOperationResult<T> SuccessResult(T data, ServiceOperationType operation, long elapsedMs = 0)
+        {
+            return new ServiceOperationResult<T>
+            {
+                Success = true,
+                Data = data,
+                Operation = operation,
+                ElapsedMilliseconds = elapsedMs
+            };
+        }
+
+        /// <summary>
+        /// 创建失败结果
+        /// </summary>
+        public static ServiceOperationResult<T> FailureResult(
+            ServiceOperationType operation,
+            string errorMessage,
+            string? details = null,
+            long elapsedMs = 0)
+        {
+            return new ServiceOperationResult<T>
+            {
+                Success = false,
+                Operation = operation,
+                ErrorMessage = errorMessage,
+                Details = details,
+                ElapsedMilliseconds = elapsedMs
+            };
+        }
+    }
 }

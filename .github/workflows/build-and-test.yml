@@ -1,0 +1,197 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  test:
+    name: Test
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore
+
+    - name: Test
+      run: dotnet test --no-build --verbosity normal --collect:"XPlat Code Coverage"
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        files: '**/coverage.cobertura.xml'
+        fail_ci_if_error: false
+        verbose: false
+
+  build:
+    name: Build
+    needs: test
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+        platform: [x64, x86]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --configuration ${{ matrix.configuration }} -p:Platform=${{ matrix.platform }} --no-restore
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-${{ matrix.configuration }}-${{ matrix.platform }}
+        path: src/WinServiceManager/bin/${{ matrix.configuration }}/
+
+  publish:
+    name: Publish
+    needs: build
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    strategy:
+      matrix:
+        configuration: [Release]
+        platform: [x64, x86]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Publish
+      run: |
+        $rid = "win-${{ matrix.platform }}"
+        $outputPath = "publish/$rid"
+
+        dotnet publish src/WinServiceManager/WinServiceManager.csproj `
+          --configuration ${{ matrix.configuration }} `
+          --runtime $rid `
+          --self-contained false `
+          -p:PublishSingleFile=true `
+          -p:PublishReadyToRun=true `
+          --output $outputPath
+
+    - name: Copy WinSW
+      run: |
+        if (Test-Path "templates/WinSW-x64.exe") {
+          $rid = "win-${{ matrix.platform }}"
+          $templatesDir = "publish/$rid/templates"
+          New-Item -ItemType Directory -Path $templatesDir -Force
+          Copy-Item "templates/WinSW-x64.exe" "$templatesDir/WinSW-x64.exe"
+        }
+
+    - name: Create package
+      run: |
+        $rid = "win-${{ matrix.platform }}"
+        $version = (Select-String -Path "src/WinServiceManager/WinServiceManager.csproj" -Pattern "AssemblyVersion>.*?([0-9.]+)").Matches.Groups[1].Value
+        $packageName = "WinServiceManager-v$version-$rid"
+        $packagePath = "publish/$packageName"
+        $sourcePath = "publish/$rid"
+
+        if (Test-Path $packagePath) {
+          Remove-Item -Path $packagePath -Recurse -Force
+        }
+
+        New-Item -ItemType Directory -Path $packagePath | Out-Null
+        Copy-Item -Path "$sourcePath/*" -Destination $packagePath -Recurse
+
+        $readmeContent = @"
+# WinServiceManager v$version
+
+## 系统要求
+- Windows 10/11 或 Windows Server 2019/2022
+- .NET 8 Runtime
+- 管理员权限
+
+## 安装说明
+1. 以管理员身份运行 WinServiceManager.exe
+2. 首次运行会自动创建必要的目录结构
+3. 确保 templates\WinSW-x64.exe 文件存在
+
+## 使用说明
+详见项目文档：https://github.com/LiteHomeLab/windows_services_manager
+
+## 发布日期
+$(Get-Date -Format "yyyy-MM-dd")
+"@
+
+        $readmeContent | Out-File -FilePath "$packagePath/README.txt" -Encoding UTF8
+
+        Compress-Archive -Path "$packagePath/*" -DestinationPath "publish/$packageName.zip"
+
+    - name: Upload release assets
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: publish/WinServiceManager-v${{ github.event.release.tag_name }}-win-${{ matrix.platform }}.zip
+        asset_name: WinServiceManager-v${{ github.event.release.tag_name }}-win-${{ matrix.platform }}.zip
+        asset_content_type: application/zip

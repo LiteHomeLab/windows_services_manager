@@ -32,7 +32,7 @@ namespace WinServiceManager.Services
             return services;
         }
 
-        public async Task<ServiceOperationResult> CreateServiceAsync(ServiceCreateRequest request)
+        public async Task<ServiceOperationResult<string>> CreateServiceAsync(ServiceCreateRequest request)
         {
             var service = new ServiceItem
             {
@@ -42,7 +42,12 @@ namespace WinServiceManager.Services
                 ScriptPath = request.ScriptPath,
                 Arguments = request.Arguments,
                 WorkingDirectory = request.WorkingDirectory,
-                Status = ServiceStatus.Installing
+                Status = ServiceStatus.Installing,
+                Dependencies = request.Dependencies ?? new List<string>(),
+                EnvironmentVariables = request.EnvironmentVariables ?? new Dictionary<string, string>(),
+                ServiceAccount = request.ServiceAccount,
+                StartMode = request.StartMode ?? "Automatic",
+                StopTimeout = request.StopTimeout
             };
 
             try
@@ -79,7 +84,14 @@ namespace WinServiceManager.Services
                 service.UpdatedAt = DateTime.Now;
                 await _dataStorage.UpdateServiceAsync(service);
 
-                return result;
+                if (result.Success)
+                {
+                    return ServiceOperationResult<string>.SuccessResult(service.Id, ServiceOperationType.Install);
+                }
+                else
+                {
+                    return ServiceOperationResult<string>.FailureResult(ServiceOperationType.Install, result.ErrorMessage ?? "安装失败");
+                }
             }
             catch (Exception ex)
             {
@@ -87,8 +99,13 @@ namespace WinServiceManager.Services
                 service.UpdatedAt = DateTime.Now;
                 await _dataStorage.UpdateServiceAsync(service);
 
-                return ServiceOperationResult.FailureResult(ServiceOperationType.Install, ex.Message);
+                return ServiceOperationResult<string>.FailureResult(ServiceOperationType.Install, ex.Message);
             }
+        }
+
+        public async Task<ServiceOperationResult> InstallServiceAsync(ServiceItem service)
+        {
+            return await _winswWrapper.InstallServiceAsync(service);
         }
 
         public async Task<ServiceOperationResult> StartServiceAsync(ServiceItem service)
@@ -157,7 +174,7 @@ namespace WinServiceManager.Services
             return result;
         }
 
-        private async Task<ServiceStatus> GetActualServiceStatusAsync(ServiceItem service)
+        public async Task<ServiceStatus> GetActualServiceStatusAsync(ServiceItem service)
         {
             try
             {

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/command-line-api/main/src/dotnet/JSONSchemas/runsettings.schema.json",
+  "runConfiguration": {
+    "disableAppDomain": true,
+    "collectSourceInformation": false,
+    "maxParallelThreads": 1
+  },
+  "testRunConfiguration": {
+    "disableAppDomain": true,
+    "parallelizeTestCollections": false,
+    "maxParallelThreads": 1
+  },
+  "DataCollectionRunSettings": {
+    "DataCollectors": [
+      {
+        "FriendlyName": "XPlat Code Coverage",
+        "Configuration": {
+          "Format": "cobertura",
+          "Exclude": "[*]System.*;[*]Microsoft.*;[*]Moq.*"
+        }
+      }
+    ]
+  },
+  "LoggerRunSettings": {
+    "Loggers": [
+      {
+        "FriendlyName": "console",
+        "Configuration": {
+          "Verbosity": "normal"
+        }
+      },
+      {
+        "FriendlyName": "trx",
+        "Configuration": {
+          "LogFileName": "test_results.trx"
+        }
+      }
+    ]
+  },
+  "MSTest": {
+    "MapInconclusiveTestToFailed": true,
+    "CaptureTraceOutput": true,
+    "DeleteDeploymentDirectoryAfterTestRunIsComplete": true,
+    "GenerateTrxFile": true
+  },
+  "VSTest": {
+    "TestCaseFilter": "TestCategory!=Integration",
+    "ParallelizeTestCollections": false,
+    "TestResultsPath": "TestResults"
+  }
+}

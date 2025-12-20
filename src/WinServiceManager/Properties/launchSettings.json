@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "WinServiceManager": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

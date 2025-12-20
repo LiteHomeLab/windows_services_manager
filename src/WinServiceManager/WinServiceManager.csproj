@@ -4,7 +4,9 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <!-- <ApplicationIcon>Resources\app.ico</ApplicationIcon> -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyTitle>WinServiceManager</AssemblyTitle>
     <AssemblyDescription>Windows服务管理器 - 基于WinSW的服务管理工具</AssemblyDescription>
     <AssemblyCompany>LiteHomeLab</AssemblyCompany>
@@ -12,6 +14,18 @@
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <AssemblyFileVersion>1.0.0.0</AssemblyFileVersion>
     <Copyright>Copyright © LiteHomeLab 2024</Copyright>
+    <RuntimeIdentifiers>win-x64;win-x86</RuntimeIdentifiers>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+  </PropertyGroup>
+
+  <!-- GC优化配置 -->
+  <PropertyGroup>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <RetainVMGarbageCollection>false</RetainVMGarbageCollection>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
