@@ -109,7 +109,25 @@ services/{ServiceID}/
 - Windows 10/11 or Windows Server 2019/2022
 - .NET 8 Runtime
 - Administrator privileges (required and enforced)
-- WinSW-x64.exe must be present in templates/ directory
+- WinSW-x64.exe (downloaded automatically or manually to templates/ directory)
+
+## WinSW Setup (First Time Only)
+
+### Automatic Download (Recommended)
+```bash
+# Run the download script (PowerShell)
+.\scripts\download-winsw.ps1
+
+# Or run the batch file version
+.\scripts\download-winsw.bat
+```
+
+### Manual Download
+1. Download WinSW-x64.exe from: https://github.com/winsw/winsw/releases
+2. Place the file in: `src/WinServiceManager/templates/WinSW-x64.exe`
+
+### Verification
+After setup, the application will verify WinSW availability on startup.
 
 ## Important Notes
 - Always run as Administrator - the app validates this on startup
