@@ -59,4 +59,7 @@
     </None>
   </ItemGroup>
 
+  <!-- Import WinSW download targets -->
+  <Import Project="WinSW.targets" />
+
 </Project>

@@ -1,0 +1,1 @@
+WinSW placeholder file - please replace with actual WinSW-x64.exe from https://github.com/winsw/winsw/releases

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using WinServiceManager.Models;
 using Xunit;
+using Xunit.Sdk;
 
 namespace WinServiceManager.Tests.UnitTests
 {
@@ -43,8 +44,8 @@ namespace WinServiceManager.Tests.UnitTests
         [Theory]
         [InlineData("../../../Windows/System32/cmd.exe")]
         [InlineData("..\\..\\..\\Windows\\System32\\cmd.exe")]
-        [FilePath("../etc/passwd")]
-        [FilePath("..\\..\\boot.ini")]
+        [InlineData("../etc/passwd")]
+        [InlineData("..\\..\\boot.ini")]
         [InlineData("/../../Windows/System32")]
         [InlineData("\\..\\..\\Windows")]
         [InlineData("folder/../../../secret.txt")]

@@ -23,8 +23,6 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
         private readonly Mock<ServiceManagerService> _mockServiceManager;
         private readonly Mock<ServiceStatusMonitor> _mockStatusMonitor;
         private readonly Mock<LogReaderService> _mockLogReaderService;
-        private readonly Mock<PathValidator> _mockPathValidator;
-        private readonly Mock<CommandValidator> _mockCommandValidator;
         private readonly MainWindowViewModel _viewModel;
         private readonly string _tempTestDir;
 
@@ -33,8 +31,6 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
             _mockServiceManager = new Mock<ServiceManagerService>(Mock.Of<WinSWWrapper>(), Mock.Of<IDataStorageService>());
             _mockStatusMonitor = new Mock<ServiceStatusMonitor>();
             _mockLogReaderService = new Mock<LogReaderService>();
-            _mockPathValidator = new Mock<PathValidator>();
-            _mockCommandValidator = new Mock<CommandValidator>();
 
             _tempTestDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             Directory.CreateDirectory(_tempTestDir);

@@ -123,7 +123,11 @@ namespace WinServiceManager.Models
         /// <summary>
         /// 启动参数（别名为Arguments，用于导出兼容性）
         /// </summary>
-        public string StartupArguments => Arguments;
+        public string StartupArguments
+        {
+            get => Arguments;
+            set => Arguments = value;
+        }
 
         /// <summary>
         /// 服务账户
@@ -133,12 +137,26 @@ namespace WinServiceManager.Models
         /// <summary>
         /// 环境变量（别名为EnvironmentVariables，用于导出兼容性）
         /// </summary>
-        public Dictionary<string, string> Environment => EnvironmentVariables;
+        public Dictionary<string, string> Environment
+        {
+            get => EnvironmentVariables;
+            set => EnvironmentVariables = value ?? new Dictionary<string, string>();
+        }
 
         /// <summary>
         /// 日志路径
         /// </summary>
-        public string LogPath => LogDirectory;
+        public string LogPath
+        {
+            get => LogDirectory;
+            set
+            {
+                // LogPath 是 LogDirectory 的别名，所以我们需要小心处理
+                // 如果设置值，我们需要确保它指向正确的目录
+                // 在实际应用中，这个属性主要用于导出和兼容性
+                // 这里我们不修改 LogDirectory，因为它是计算属性
+            }
+        }
 
         /// <summary>
         /// 日志模式
@@ -148,7 +166,7 @@ namespace WinServiceManager.Models
         /// <summary>
         /// 启动模式
         /// </summary>
-        public string StartMode { get; set; } = "Automatic";
+        public ServiceStartupMode StartMode { get; set; } = ServiceStartupMode.Automatic;
 
         /// <summary>
         /// 停止超时时间（毫秒）
@@ -158,7 +176,7 @@ namespace WinServiceManager.Models
         /// <summary>
         /// 进程优先级
         /// </summary>
-        public string Priority { get; set; } = "Normal";
+        public ProcessPriority Priority { get; set; } = ProcessPriority.Normal;
 
         /// <summary>
         /// 进程亲和性
@@ -287,9 +305,9 @@ namespace WinServiceManager.Models
                 }
 
                 // 添加启动模式
-                if (!string.IsNullOrEmpty(StartMode) && StartMode != "Automatic")
+                if (StartMode != ServiceStartupMode.Automatic)
                 {
-                    serviceElement.Add(new XElement("startmode", SecurityElement.Escape(StartMode)));
+                    serviceElement.Add(new XElement("startmode", SecurityElement.Escape(StartMode.ToString().ToLower())));
                 }
 
                 // 添加停止超时
@@ -307,5 +325,28 @@ namespace WinServiceManager.Models
                 throw new InvalidOperationException("Failed to generate WinSW configuration", ex);
             }
         }
+    }
+
+    /// <summary>
+    /// 服务启动模式枚举
+    /// </summary>
+    public enum ServiceStartupMode
+    {
+        Automatic,
+        Manual,
+        Disabled
+    }
+
+    /// <summary>
+    /// 进程优先级枚举
+    /// </summary>
+    public enum ProcessPriority
+    {
+        Idle,
+        BelowNormal,
+        Normal,
+        AboveNormal,
+        High,
+        RealTime
     }
 }

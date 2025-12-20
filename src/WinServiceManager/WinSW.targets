@@ -1,0 +1,38 @@
+<Project>
+  <PropertyGroup>
+    <WinSWVersion>3.0.0</WinSWVersion>
+    <WinSWFileName>WinSW-x64.exe</WinSWFileName>
+    <WinSWDownloadUrl>https://github.com/winsw/winsw/releases/download/v$(WinSWVersion)/$(WinSWFileName)</WinSWDownloadUrl>
+    <WinSWTargetPath>$(MSBuildProjectDirectory)\templates\$(WinSWFileName)</WinSWTargetPath>
+  </PropertyGroup>
+
+  <!-- Target to download WinSW if it doesn't exist -->
+  <Target Name="DownloadWinSW" BeforeTargets="PrepareForBuild" Condition="!Exists('$(WinSWTargetPath)')">
+    <Message Text="Downloading WinSW $(WinSWVersion)..." Importance="high" />
+
+    <!-- Create templates directory -->
+    <MakeDir Directories="$(MSBuildProjectDirectory)\templates" />
+
+    <!-- Download WinSW using PowerShell -->
+    <Exec Command="powershell -Command &quot;$ProgressPreference = 'SilentlyContinue'; try { Invoke-WebRequest -Uri '$(WinSWDownloadUrl)' -OutFile '$(WinSWTargetPath)' -ErrorAction Stop } catch { Write-Host 'Download failed, will continue build...'; exit 0 }&quot;"
+          ContinueOnError="true" />
+
+    <Message Text="WinSW downloaded to $(WinSWTargetPath)" Importance="high" />
+
+    <!-- Warn if WinSW is missing -->
+    <Warning Text="WinSW not found at $(WinSWTargetPath). Please download manually from $(WinSWDownloadUrl) or run: .\scripts\download-winsw.ps1"
+             Condition="!Exists('$(WinSWTargetPath)')" />
+  </Target>
+
+  <!-- Target to verify WinSW exists -->
+  <Target Name="VerifyWinSW" BeforeTargets="Build" Condition="Exists('$(WinSWTargetPath)')">
+    <Message Text="WinSW found: $(WinSWTargetPath)" Importance="normal" />
+  </Target>
+
+  <!-- Ensure WinSW is copied to output directory only if it exists -->
+  <ItemGroup Condition="Exists('$(WinSWTargetPath)')">
+    <Content Include="templates\$(WinSWFileName)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

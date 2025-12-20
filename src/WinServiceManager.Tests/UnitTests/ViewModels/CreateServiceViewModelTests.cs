@@ -17,16 +17,12 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
     public class CreateServiceViewModelTests : IDisposable
     {
         private readonly Mock<ServiceManagerService> _mockServiceManager;
-        private readonly Mock<PathValidator> _mockPathValidator;
-        private readonly Mock<CommandValidator> _mockCommandValidator;
         private readonly CreateServiceViewModel _viewModel;
         private readonly string _tempTestDir;
 
         public CreateServiceViewModelTests()
         {
             _mockServiceManager = new Mock<ServiceManagerService>(Mock.Of<WinSWWrapper>(), Mock.Of<IDataStorageService>());
-            _mockPathValidator = new Mock<PathValidator>();
-            _mockCommandValidator = new Mock<CommandValidator>();
 
             _tempTestDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             Directory.CreateDirectory(_tempTestDir);
@@ -101,7 +97,7 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
         [InlineData("Test Service", true)]
         [InlineData("", false)]
         [InlineData("Te", false)] // Too short
-        [InlineData(new string('a', 101), false)] // Too long
+        [InlineData("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1", false)] // Too long (101 chars)
         [InlineData("   ", false)]
         public void DisplayName_Validation_UpdatesCanCreate(string displayName, bool expectedCanCreate)
         {

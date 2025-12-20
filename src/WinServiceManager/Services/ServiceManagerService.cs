@@ -46,7 +46,7 @@ namespace WinServiceManager.Services
                 Dependencies = request.Dependencies ?? new List<string>(),
                 EnvironmentVariables = request.EnvironmentVariables ?? new Dictionary<string, string>(),
                 ServiceAccount = request.ServiceAccount,
-                StartMode = request.StartMode ?? "Automatic",
+                StartMode = ParseStartMode(request.StartMode),
                 StopTimeout = request.StopTimeout
             };
 
@@ -206,6 +206,25 @@ namespace WinServiceManager.Services
                 // 如果无法获取服务状态，可能是未安装
                 return ServiceStatus.NotInstalled;
             }
+        }
+
+        /// <summary>
+        /// 解析启动模式字符串为枚举值
+        /// </summary>
+        /// <param name="startMode">启动模式字符串</param>
+        /// <returns>启动模式枚举值</returns>
+        private static ServiceStartupMode ParseStartMode(string? startMode)
+        {
+            if (string.IsNullOrEmpty(startMode))
+                return ServiceStartupMode.Automatic;
+
+            return startMode.ToLowerInvariant() switch
+            {
+                "automatic" => ServiceStartupMode.Automatic,
+                "manual" => ServiceStartupMode.Manual,
+                "disabled" => ServiceStartupMode.Disabled,
+                _ => ServiceStartupMode.Automatic
+            };
         }
     }
 }

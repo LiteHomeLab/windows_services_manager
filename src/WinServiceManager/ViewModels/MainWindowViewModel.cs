@@ -71,7 +71,7 @@ namespace WinServiceManager.ViewModels
         /// <summary>
         /// 所有服务数量
         /// </summary>
-        public int AllServicesCount { get; private set; }
+        public int AllServicesCount { get; set; }
 
         public MainWindowViewModel(
             ServiceManagerService serviceManager,

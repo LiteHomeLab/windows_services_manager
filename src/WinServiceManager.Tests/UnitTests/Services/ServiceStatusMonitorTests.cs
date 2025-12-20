@@ -17,7 +17,7 @@ namespace WinServiceManager.Tests.UnitTests.Services;
 public class ServiceStatusMonitorTests : IDisposable
 {
     private readonly Mock<ILogger<ServiceStatusMonitor>> _loggerMock;
-    private readonly Mock<IServiceManager> _serviceManagerMock;
+    private readonly Mock<ServiceManagerService> _serviceManagerMock;
     private readonly ServiceStatusMonitor _monitor;
     private readonly List<ServiceItem> _testServices;
 
