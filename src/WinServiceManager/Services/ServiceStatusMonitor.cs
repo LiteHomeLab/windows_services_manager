@@ -13,7 +13,7 @@ namespace WinServiceManager.Services
         private readonly ServiceManagerService _serviceManager;
         private readonly ILogger<ServiceStatusMonitor> _logger;
         private readonly IPerformanceMonitorService? _performanceMonitor;
-        private Timer? _timer;
+        private System.Threading.Timer? _timer;
         private readonly List<Action<List<ServiceItem>>> _subscribers = new();
         private readonly object _lockObject = new object();
         private bool _disposed = false;

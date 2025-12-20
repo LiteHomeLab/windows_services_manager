@@ -10,6 +10,7 @@ using Moq;
 using WinServiceManager.Models;
 using WinServiceManager.Services;
 using WinServiceManager.ViewModels;
+using WinServiceManager.Dialogs;
 using Xunit;
 
 namespace WinServiceManager.Tests.UnitTests.ViewModels
@@ -23,6 +24,8 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
         private readonly Mock<ServiceManagerService> _mockServiceManager;
         private readonly Mock<ServiceStatusMonitor> _mockStatusMonitor;
         private readonly Mock<LogReaderService> _mockLogReaderService;
+        private readonly Mock<ILogger<MainWindowViewModel>> _mockLogger;
+        private readonly Mock<ServiceDependencyValidator> _mockDependencyValidator;
         private readonly MainWindowViewModel _viewModel;
         private readonly string _tempTestDir;
 
@@ -31,6 +34,8 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
             _mockServiceManager = new Mock<ServiceManagerService>(Mock.Of<WinSWWrapper>(), Mock.Of<IDataStorageService>());
             _mockStatusMonitor = new Mock<ServiceStatusMonitor>();
             _mockLogReaderService = new Mock<LogReaderService>();
+            _mockLogger = new Mock<ILogger<MainWindowViewModel>>();
+            _mockDependencyValidator = new Mock<ServiceDependencyValidator>();
 
             _tempTestDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             Directory.CreateDirectory(_tempTestDir);
@@ -45,8 +50,8 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
                 _mockServiceManager.Object,
                 _mockStatusMonitor.Object,
                 _mockLogReaderService.Object,
-                _mockPathValidator.Object,
-                _mockCommandValidator.Object);
+                _mockLogger.Object,
+                _mockDependencyValidator.Object);
         }
 
         public void Dispose()
@@ -70,8 +75,8 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
                     null!,
                     _mockStatusMonitor.Object,
                     _mockLogReaderService.Object,
-                    _mockPathValidator.Object,
-                    _mockCommandValidator.Object));
+                    _mockLogger.Object,
+                    _mockDependencyValidator.Object));
         }
 
         [Fact]
@@ -83,8 +88,8 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
                     _mockServiceManager.Object,
                     null!,
                     _mockLogReaderService.Object,
-                    _mockPathValidator.Object,
-                    _mockCommandValidator.Object));
+                    _mockLogger.Object,
+                    _mockDependencyValidator.Object));
         }
 
         [Fact]
@@ -96,12 +101,12 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
                     _mockServiceManager.Object,
                     _mockStatusMonitor.Object,
                     null!,
-                    _mockPathValidator.Object,
-                    _mockCommandValidator.Object));
+                    _mockLogger.Object,
+                    _mockDependencyValidator.Object));
         }
 
         [Fact]
-        public void Constructor_NullPathValidator_ThrowsArgumentNullException()
+        public void Constructor_NullLogger_ThrowsArgumentNullException()
         {
             // Act & Assert
             Assert.Throws<ArgumentNullException>(() =>
@@ -110,11 +115,11 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
                     _mockStatusMonitor.Object,
                     _mockLogReaderService.Object,
                     null!,
-                    _mockCommandValidator.Object));
+                    _mockDependencyValidator.Object));
         }
 
         [Fact]
-        public void Constructor_NullCommandValidator_ThrowsArgumentNullException()
+        public void Constructor_NullDependencyValidator_ThrowsArgumentNullException()
         {
             // Act & Assert
             Assert.Throws<ArgumentNullException>(() =>
@@ -122,7 +127,7 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
                     _mockServiceManager.Object,
                     _mockStatusMonitor.Object,
                     _mockLogReaderService.Object,
-                    _mockPathValidator.Object,
+                    _mockLogger.Object,
                     null!));
         }
 
@@ -768,8 +773,7 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
                         ["ENV2"] = "value2"
                     },
                     LogPath = @"C:\logs\test.log",
-                    LogMode = LogMode.Append,
-                    StartMode = ServiceStartMode.Manual,
+                    StartMode = ServiceStartupMode.Manual,
                     StopTimeout = 30000,
                     Priority = ProcessPriority.High,
                     Affinity = "0,1",

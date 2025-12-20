@@ -10,7 +10,7 @@ namespace WinServiceManager
     /// <summary>
     /// App.xaml 的交互逻辑
     /// </summary>
-    public partial class App : Application
+    public partial class App : System.Windows.Application
     {
         private ServiceProvider? _serviceProvider;
 

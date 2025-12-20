@@ -20,7 +20,7 @@ namespace WinServiceManager.ViewModels
     {
         private readonly LogReaderService _logReaderService;
         private readonly ServiceItem _service;
-        private readonly Timer _refreshTimer;
+        private readonly System.Threading.Timer _refreshTimer;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private Task? _monitorTask;
 

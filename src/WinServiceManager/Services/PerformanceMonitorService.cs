@@ -71,7 +71,7 @@ namespace WinServiceManager.Services
     {
         private readonly ILogger<PerformanceMonitorService> _logger;
         private readonly PerformanceMonitorOptions _options;
-        private readonly Timer _monitorTimer;
+        private readonly System.Threading.Timer _monitorTimer;
         private readonly LinkedList<PerformanceStats> _history;
         private readonly object _historyLock = new object();
         private readonly PerformanceCounter? _cpuCounter;

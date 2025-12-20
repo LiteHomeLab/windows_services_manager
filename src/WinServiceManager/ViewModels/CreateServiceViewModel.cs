@@ -328,16 +328,23 @@ namespace WinServiceManager.ViewModels
         [RelayCommand]
         private void BrowseWorkingDirectory()
         {
-            var dialog = new System.Windows.Forms.FolderBrowserDialog
+            var dialog = new Microsoft.Win32.OpenFileDialog
             {
-                Description = "选择工作目录",
-                ShowNewFolderButton = true,
-                SelectedPath = WorkingDirectory
+                Title = "选择工作目录",
+                Filter = "所有文件|*.*",
+                CheckFileExists = false,
+                CheckPathExists = true,
+                FileName = "选择文件夹"
             };
 
-            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            if (dialog.ShowDialog() == true)
             {
-                WorkingDirectory = dialog.SelectedPath;
+                // 获取选择的目录路径
+                string? selectedPath = Path.GetDirectoryName(dialog.FileName);
+                if (!string.IsNullOrEmpty(selectedPath))
+                {
+                    WorkingDirectory = selectedPath;
+                }
             }
         }
 

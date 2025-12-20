@@ -20,7 +20,7 @@ namespace WinServiceManager.Services
         private readonly ConcurrentDictionary<string, List<Action<string>>> _subscriptions = new();
         private readonly ConcurrentDictionary<string, long> _lastReadPositions = new();
         private readonly SemaphoreSlim _readSemaphore = new(1, 1);
-        private readonly Timer _cleanupTimer;
+        private readonly System.Threading.Timer _cleanupTimer;
         private readonly ILogger<LogReaderService>? _logger;
         private readonly ConcurrentQueue<(DateTime Time, string Operation)> _performanceMetrics = new();
         private bool _disposed = false;

@@ -17,16 +17,16 @@ namespace WinServiceManager.ViewModels
     /// </summary>
     internal static class StatusColorCache
     {
-        public static readonly Brush RunningBrush = new SolidColorBrush(Color.FromRgb(76, 175, 80));     // Green
-        public static readonly Brush StoppedBrush = new SolidColorBrush(Color.FromRgb(244, 67, 54));      // Red
-        public static readonly Brush StartingBrush = new SolidColorBrush(Color.FromRgb(255, 152, 0));    // Orange
-        public static readonly Brush StoppingBrush = new SolidColorBrush(Color.FromRgb(255, 152, 0));    // Orange
-        public static readonly Brush InstallingBrush = new SolidColorBrush(Color.FromRgb(156, 39, 176));  // Purple
-        public static readonly Brush UninstallingBrush = new SolidColorBrush(Color.FromRgb(156, 39, 176)); // Purple
-        public static readonly Brush ErrorBrush = new SolidColorBrush(Color.FromRgb(183, 28, 28));       // Dark Red
-        public static readonly Brush PausedBrush = new SolidColorBrush(Color.FromRgb(255, 152, 0));     // Orange
-        public static readonly Brush NotInstalledBrush = new SolidColorBrush(Color.FromRgb(158, 158, 158)); // Gray
-        public static readonly Brush DefaultBrush = new SolidColorBrush(Color.FromRgb(158, 158, 158)); // Gray
+        public static readonly System.Windows.Media.Brush RunningBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(76, 175, 80));     // Green
+        public static readonly System.Windows.Media.Brush StoppedBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(244, 67, 54));      // Red
+        public static readonly System.Windows.Media.Brush StartingBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 152, 0));    // Orange
+        public static readonly System.Windows.Media.Brush StoppingBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 152, 0));    // Orange
+        public static readonly System.Windows.Media.Brush InstallingBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(156, 39, 176));  // Purple
+        public static readonly System.Windows.Media.Brush UninstallingBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(156, 39, 176)); // Purple
+        public static readonly System.Windows.Media.Brush ErrorBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(183, 28, 28));       // Dark Red
+        public static readonly System.Windows.Media.Brush PausedBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 152, 0));     // Orange
+        public static readonly System.Windows.Media.Brush NotInstalledBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(158, 158, 158)); // Gray
+        public static readonly System.Windows.Media.Brush DefaultBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(158, 158, 158)); // Gray
     }
 
     /// <summary>
@@ -101,7 +101,7 @@ namespace WinServiceManager.ViewModels
         /// <summary>
         /// 状态对应的颜色
         /// </summary>
-        public Brush StatusColor => Status switch
+        public System.Windows.Media.Brush StatusColor => Status switch
         {
             ServiceStatus.Running => StatusColorCache.RunningBrush,
             ServiceStatus.Stopped => StatusColorCache.StoppedBrush,

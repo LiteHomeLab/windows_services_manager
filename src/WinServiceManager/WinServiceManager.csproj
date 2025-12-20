@@ -4,7 +4,9 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
-    <UseWindowsForms>true</UseWindowsForms>
+    <!-- <UseWindowsForms>true</UseWindowsForms> -->
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
     <!-- <ApplicationIcon>Resources\app.ico</ApplicationIcon> -->
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyTitle>WinServiceManager</AssemblyTitle>
