@@ -90,7 +90,7 @@ services/{ServiceID}/
 dotnet test
 
 # Run with coverage
-.\run-tests.ps1 -Coverage
+.\scripts\test\run-tests.ps1 -Coverage
 
 # Run specific test categories
 dotnet test --filter "Category=Security"
@@ -122,26 +122,30 @@ src/
 dotnet build
 
 # Release build
-.\build-release.ps1
+.\scripts\build\build-release.ps1
 
 # Publish distribution
-.\build-release.ps1 --publish
+.\scripts\build\build-release.ps1 --publish
 ```
 
 ### Test Scripts
 
 ```bash
 # Quick test
-.\run-tests.bat
+.\scripts\test\run-tests.bat
 
 # Detailed test with coverage
-.\run-tests.ps1 -Coverage -Verbose
+.\scripts\test\run-tests.ps1 -Coverage -Verbose
 ```
 
 ## 📚 Documentation
 
-- **[CLAUDE.md](CLAUDE.md)**: Development guidelines and internal documentation
-- **[plans/](plans/)**: Implementation plans and design documents
+- **[📖 文档中心](docs/)**: 完整的项目文档
+  - [快速开始](docs/getting-started/QUICKSTART.md) - 快速上手指南
+  - [安装说明](docs/getting-started/installation.md) - 详细安装说明
+  - [开发文档](docs/development/) - 开发相关文档
+- **[CLAUDE.md](CLAUDE.md)**: Claude AI 开发指南和项目架构说明
+- **[📜 脚本工具](scripts/)**: 构建和测试脚本工具
 
 ## 🔗 Dependencies
 

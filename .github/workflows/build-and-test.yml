@@ -161,25 +161,7 @@ jobs:
         New-Item -ItemType Directory -Path $packagePath | Out-Null
         Copy-Item -Path "$sourcePath/*" -Destination $packagePath -Recurse
 
-        $readmeContent = @"
-# WinServiceManager v$version
-
-## 系统要求
-- Windows 10/11 或 Windows Server 2019/2022
-- .NET 8 Runtime
-- 管理员权限
-
-## 安装说明
-1. 以管理员身份运行 WinServiceManager.exe
-2. 首次运行会自动创建必要的目录结构
-3. 确保 templates\WinSW-x64.exe 文件存在
-
-## 使用说明
-详见项目文档：https://github.com/LiteHomeLab/windows_services_manager
-
-## 发布日期
-$(Get-Date -Format "yyyy-MM-dd")
-"@
+        $readmeContent = "# WinServiceManager v$version`n`n## 系统要求`n- Windows 10/11 或 Windows Server 2019/2022`n- .NET 8 Runtime`n- 管理员权限`n`n## 安装说明`n1. 以管理员身份运行 WinServiceManager.exe`n2. 首次运行会自动创建必要的目录结构`n3. 确保 templates\WinSW-x64.exe 文件存在`n`n## 使用说明`n详见项目文档：https://github.com/LiteHomeLab/windows_services_manager`n`n## 发布日期`n$(Get-Date -Format `"yyyy-MM-dd`")"
 
         $readmeContent | Out-File -FilePath "$packagePath/README.txt" -Encoding UTF8
 

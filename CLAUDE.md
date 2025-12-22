@@ -25,15 +25,15 @@ dotnet build src/WinServiceManager.sln
 dotnet test
 
 # Run tests using provided scripts
-./run-tests.bat      # Windows batch
-./run-tests.ps1      # PowerShell
+./scripts/test/run-tests.bat      # Windows batch
+./scripts/test/run-tests.ps1      # PowerShell
 
 # Build release version
-./build-release.bat          # Windows batch
-./build-release.ps1          # PowerShell
+./scripts/build/build-release.bat          # Windows batch
+./scripts/build/build-release.ps1          # PowerShell
 
 # Publish distribution package
-./build-release.bat --publish -o publish
+./scripts/build/build-release.bat --publish -o publish
 
 # Run application (requires Administrator privileges)
 dotnet run --project src/WinServiceManager
