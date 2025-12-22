@@ -36,13 +36,13 @@ jobs:
           ${{ runner.os }}-nuget-
 
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore src/WinServiceManager.sln
 
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build src/WinServiceManager.sln --no-restore
 
     - name: Test
-      run: dotnet test --no-build --verbosity normal --collect:"XPlat Code Coverage"
+      run: dotnet test src/WinServiceManager.sln --no-build --verbosity normal --collect:"XPlat Code Coverage"
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3
@@ -81,10 +81,10 @@ jobs:
           ${{ runner.os }}-nuget-
 
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore src/WinServiceManager.sln
 
     - name: Build
-      run: dotnet build --configuration ${{ matrix.configuration }} -p:Platform=${{ matrix.platform }} --no-restore
+      run: dotnet build src/WinServiceManager.sln --configuration ${{ matrix.configuration }} -p:Platform=${{ matrix.platform }} --no-restore
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
@@ -122,7 +122,7 @@ jobs:
           ${{ runner.os }}-nuget-
 
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore src/WinServiceManager.sln
 
     - name: Publish
       run: |
