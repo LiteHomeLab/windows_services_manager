@@ -96,18 +96,12 @@
                 <ListView.View>
                     <GridView>
                         <GridViewColumn Header="服务名称" DisplayMemberBinding="{Binding DisplayName}" Width="150"/>
-                        <GridViewColumn Header="启动状态" Width="100">
+                        <GridViewColumn Header="状态" Width="100">
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding StartupResultDisplay}"
-                                               Foreground="{Binding StartupResultColor}"
-                                               Cursor="Hand"
-                                               ToolTip="点击查看详情">
-                                        <TextBlock.InputBindings>
-                                            <MouseBinding Command="{Binding ShowStartupFailureDetailsCommand}"
-                                                          MouseAction="LeftClick"/>
-                                        </TextBlock.InputBindings>
-                                    </TextBlock>
+                                    <TextBlock Text="{Binding StatusDisplay}"
+                                               Foreground="{Binding StatusColor}"
+                                               FontWeight="SemiBold"/>
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
@@ -126,7 +120,6 @@
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
-                        <GridViewColumn Header="状态" DisplayMemberBinding="{Binding StatusDisplay}" Width="80"/>
                         <GridViewColumn Header="依赖" DisplayMemberBinding="{Binding DependenciesDisplay}" Width="70"/>
                         <GridViewColumn Header="描述" DisplayMemberBinding="{Binding Description}" Width="180"/>
                         <GridViewColumn Header="可执行文件" DisplayMemberBinding="{Binding ExecutablePath}" Width="150"/>
