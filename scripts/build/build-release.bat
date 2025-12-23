@@ -60,8 +60,12 @@ echo Configuration: %CONFIGURATION%
 echo Platform: %PLATFORM%
 echo.
 
+REM Set output directory to project root bin folder
+set BIN_OUTPUT=%PROJECT_ROOT%bin\%PLATFORM%\%CONFIGURATION%
+
 REM Clean previous builds
 echo Cleaning previous builds...
+if exist "%BIN_OUTPUT%" rmdir /s /q "%BIN_OUTPUT%"
 dotnet clean "%PROJECT_ROOT%src\WinServiceManager\WinServiceManager.csproj" -c %CONFIGURATION% -p:Platform=%PLATFORM%
 
 REM Restore packages
@@ -70,7 +74,7 @@ dotnet restore "%PROJECT_ROOT%src\WinServiceManager\WinServiceManager.csproj"
 
 REM Build the main project only (excluding tests to avoid build failures)
 echo Building main project...
-dotnet build "%PROJECT_ROOT%src\WinServiceManager\WinServiceManager.csproj" -c %CONFIGURATION% -p:Platform=%PLATFORM% --no-restore
+dotnet build "%PROJECT_ROOT%src\WinServiceManager\WinServiceManager.csproj" -c %CONFIGURATION% -p:Platform=%PLATFORM% --no-restore -o "%BIN_OUTPUT%"
 
 if %ERRORLEVEL% neq 0 (
     echo Build failed!
@@ -156,9 +160,9 @@ echo.
 echo Build process completed successfully!
 echo.
 echo Output location:
-echo %PROJECT_ROOT%src\WinServiceManager\bin\%PLATFORM%\%CONFIGURATION%\net8.0-windows\
+echo %BIN_OUTPUT%
 echo.
 echo Main executable:
-echo %PROJECT_ROOT%src\WinServiceManager\bin\%PLATFORM%\%CONFIGURATION%\net8.0-windows\WinServiceManager.exe
+echo %BIN_OUTPUT%\WinServiceManager.exe
 echo.
 pause
