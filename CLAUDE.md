@@ -98,6 +98,84 @@ services/{ServiceID}/
 - **CommunityToolkit.Mvvm**: MVVM framework
 - **Microsoft.Extensions.***: DI, Configuration, Logging
 - **System.ServiceProcess.ServiceController**: Windows service control
+- **log4net**: File-based logging framework
+
+## Logging Configuration
+
+### Log4net Integration
+The application uses log4net for file-based logging integrated with Microsoft.Extensions.Logging.
+
+### Log File Location
+- **Path**: `logs/` folder in the application directory
+- **File Naming**: `WinServiceManagerYYYY-MM-DD.log` (e.g., `WinServiceManager2024-12-23.log`)
+- **Retention**: 30 days (automatically deletes older logs)
+- **Rolling**: Creates a new file each day at midnight
+
+### Log Levels
+- **Debug**: Detailed diagnostic information
+- **Information**: General informational messages
+- **Warning**: Warning messages for potentially harmful situations
+- **Error**: Error events for runtime errors
+- **Critical**: Critical events causing application failure
+
+### Configuration File
+- **Location**: `src/WinServiceManager/log4net.config`
+- **Copied to**: Output directory during build
+- **Modifications**: Edit `log4net.config` to change logging behavior
+
+### Global Exception Handling
+The application implements comprehensive exception handling:
+- **UI Thread Exceptions**: Caught via `DispatcherUnhandledException`
+- **Non-UI Thread Exceptions**: Caught via `AppDomain.CurrentDomain.UnhandledException`
+- **Task Exceptions**: Caught via `TaskScheduler.UnobservedTaskException`
+- All unhandled exceptions are logged before application termination
+
+### Viewing Logs
+Logs can be viewed through:
+1. Direct file access: Open `logs/WinServiceManager*.log` files
+2. Application log viewer: Use the built-in LogViewerWindow for service-specific logs
+3. Text editor: Any text editor can open the log files
+
+### Log Format
+```
+2024-12-23 14:30:45,123 [Main] INFO  WinServiceManager.App - WinServiceManager application starting up...
+```
+Format: `Date Time [Thread] Level Logger - Message`
+
+### How to Use Logging in Code
+```csharp
+// In your class constructor, inject ILogger
+public class MyService
+{
+    private readonly ILogger<MyService> _logger;
+
+    public MyService(ILogger<MyService> logger)
+    {
+        _logger = logger;
+    }
+
+    public void DoWork()
+    {
+        _logger.LogInformation("Starting work...");
+        try
+        {
+            // Do something
+            _logger.LogInformation("Work completed successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while doing work");
+        }
+    }
+}
+```
+
+### Troubleshooting Logging
+If logs are not being generated:
+1. Verify `log4net.config` exists in the application directory
+2. Check write permissions for the `logs/` folder
+3. Ensure Administrator privileges (required by the application)
+4. Review Console output for log4net initialization errors
 
 ## Testing Strategy
 - Unit tests cover ViewModels, Services, and Validators
