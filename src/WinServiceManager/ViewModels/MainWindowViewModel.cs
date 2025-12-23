@@ -16,6 +16,32 @@ using WinServiceManager.Views;
 namespace WinServiceManager.ViewModels
 {
     /// <summary>
+    /// 服务过滤器枚举
+    /// </summary>
+    public enum ServiceFilter
+    {
+        /// <summary>
+        /// 显示全部服务
+        /// </summary>
+        All = 0,
+
+        /// <summary>
+        /// 仅显示启动成功的服務
+        /// </summary>
+        Success = 1,
+
+        /// <summary>
+        /// 仅显示启动失败的服务
+        /// </summary>
+        Failed = 2,
+
+        /// <summary>
+        /// 仅显示警告状态的服务
+        /// </summary>
+        Warning = 3
+    }
+
+    /// <summary>
     /// 主窗口视图模型
     /// </summary>
     public partial class MainWindowViewModel : BaseViewModel, IDisposable
@@ -31,6 +57,8 @@ namespace WinServiceManager.ViewModels
         private bool _disposed = false;
         private string _searchText = string.Empty;
         private ObservableCollection<ServiceItemViewModel> _allServices = new();
+        private ServiceFilter _selectedFilter = ServiceFilter.All;
+        private int _selectedFilterIndex = 0;
 
         /// <summary>
         /// 服务项视图模型集合
@@ -74,6 +102,40 @@ namespace WinServiceManager.ViewModels
         /// 所有服务数量
         /// </summary>
         public int AllServicesCount { get; set; }
+
+        /// <summary>
+        /// 选中的服务过滤器
+        /// </summary>
+        public ServiceFilter SelectedFilter
+        {
+            get => _selectedFilter;
+            set
+            {
+                if (SetProperty(ref _selectedFilter, value))
+                {
+                    // 同步更新 SelectedFilterIndex
+                    SelectedFilterIndex = (int)value;
+                    FilterServices();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 选中的服务过滤器索引（用于 UI 绑定）
+        /// </summary>
+        public int SelectedFilterIndex
+        {
+            get => _selectedFilterIndex;
+            set
+            {
+                if (SetProperty(ref _selectedFilterIndex, value) && Enum.IsDefined(typeof(ServiceFilter), value))
+                {
+                    // 同步更新 SelectedFilter
+                    _selectedFilter = (ServiceFilter)value;
+                    FilterServices();
+                }
+            }
+        }
 
         public MainWindowViewModel(
             ServiceManagerService serviceManager,
@@ -366,7 +428,7 @@ namespace WinServiceManager.ViewModels
         }
 
         /// <summary>
-        /// 过滤服务列表
+        /// 过滤服务列表（同时支持搜索文本和启动结果过滤）
         /// </summary>
         private void FilterServices()
         {
@@ -376,33 +438,44 @@ namespace WinServiceManager.ViewModels
                 {
                     Services.Clear();
 
-                    if (string.IsNullOrWhiteSpace(_searchText))
+                    // 首先应用启动结果过滤
+                    IEnumerable<ServiceItemViewModel> filtered = _selectedFilter switch
                     {
-                        // 显示所有服务
-                        foreach (var service in _allServices)
-                        {
-                            Services.Add(service);
-                        }
-                        StatusMessage = $"显示所有服务 ({_allServices.Count})";
-                    }
-                    else
+                        ServiceFilter.Success => _allServices.Where(s => s.LastStartupResult == StartupResult.Success),
+                        ServiceFilter.Failed => _allServices.Where(s => s.LastStartupResult == StartupResult.Failed),
+                        ServiceFilter.Warning => _allServices.Where(s => s.LastStartupResult == StartupResult.Warning),
+                        _ => _allServices
+                    };
+
+                    // 然后应用搜索文本过滤
+                    if (!string.IsNullOrWhiteSpace(_searchText))
                     {
-                        // 过滤服务
                         var searchTerm = _searchText.Trim().ToLowerInvariant();
-                        var filteredServices = _allServices.Where(s =>
+                        filtered = filtered.Where(s =>
                             s.DisplayName.ToLowerInvariant().Contains(searchTerm) ||
                             s.Description.ToLowerInvariant().Contains(searchTerm) ||
                             s.ExecutablePath.ToLowerInvariant().Contains(searchTerm) ||
                             s.Status.ToString().ToLowerInvariant().Contains(searchTerm)
-                        ).ToList();
-
-                        foreach (var service in filteredServices)
-                        {
-                            Services.Add(service);
-                        }
-
-                        StatusMessage = $"找到 {filteredServices.Count} 个匹配的服务";
+                        );
                     }
+
+                    var filteredList = filtered.ToList();
+                    foreach (var service in filteredList)
+                    {
+                        Services.Add(service);
+                    }
+
+                    // 更新状态消息
+                    var filterText = _selectedFilter switch
+                    {
+                        ServiceFilter.Success => "启动成功",
+                        ServiceFilter.Failed => "启动失败",
+                        ServiceFilter.Warning => "警告",
+                        _ => "全部"
+                    };
+
+                    var searchText = !string.IsNullOrWhiteSpace(_searchText) ? $" (搜索: {_searchText})" : "";
+                    StatusMessage = $"显示 {filterText} 服务: {filteredList.Count}{searchText}";
                 });
 
                 // 2秒后恢复默认状态消息

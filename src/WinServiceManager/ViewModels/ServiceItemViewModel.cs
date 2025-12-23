@@ -170,6 +170,63 @@ namespace WinServiceManager.ViewModels
         /// </summary>
         public string Arguments => Service.Arguments;
 
+        /// <summary>
+        /// 最后一次启动结果
+        /// </summary>
+        public StartupResult LastStartupResult
+        {
+            get => Service.LastStartupResult;
+            private set => Service.LastStartupResult = value;
+        }
+
+        /// <summary>
+        /// 启动结果显示文本
+        /// </summary>
+        public string StartupResultDisplay => LastStartupResult switch
+        {
+            StartupResult.Success => "启动成功",
+            StartupResult.Failed => "启动失败",
+            StartupResult.Warning => "警告",
+            _ => "未知"
+        };
+
+        /// <summary>
+        /// 启动结果对应的颜色
+        /// </summary>
+        public System.Windows.Media.Brush StartupResultColor => LastStartupResult switch
+        {
+            StartupResult.Success => StatusColorCache.RunningBrush,      // 绿色
+            StartupResult.Failed => StatusColorCache.ErrorBrush,         // 红色
+            StartupResult.Warning => StatusColorCache.StartingBrush,     // 黄色
+            _ => StatusColorCache.DefaultBrush                           // 灰色
+        };
+
+        /// <summary>
+        /// 启动参数显示（截断过长的参数）
+        /// </summary>
+        public string ArgumentsDisplay
+        {
+            get
+            {
+                var args = Service.Arguments;
+                if (string.IsNullOrEmpty(args))
+                    return "-";
+
+                const int maxLength = 50;
+                return args.Length > maxLength ? args.Substring(0, maxLength) + "..." : args;
+            }
+        }
+
+        /// <summary>
+        /// 完整启动参数（用于 Tooltip）
+        /// </summary>
+        public string FullArgumentsTooltip => Service.GetFullArguments();
+
+        /// <summary>
+        /// 最后一次启动错误消息
+        /// </summary>
+        public string? LastStartupErrorMessage => Service.LastStartupErrorMessage;
+
         #endregion
 
         #region Command Properties
@@ -419,6 +476,41 @@ namespace WinServiceManager.ViewModels
         {
             // 触发编辑请求事件，由主窗口处理
             EditRequested?.Invoke(this, Service);
+        }
+
+        [RelayCommand]
+        private void CopyArguments()
+        {
+            try
+            {
+                var fullArgs = Service.GetFullArguments();
+                Clipboard.SetText(fullArgs);
+            }
+            catch (Exception ex)
+            {
+                ShowError($"复制启动参数失败: {ex.Message}");
+            }
+        }
+
+        [RelayCommand]
+        private void ShowStartupFailureDetails()
+        {
+            if (LastStartupResult == StartupResult.Failed && !string.IsNullOrEmpty(LastStartupErrorMessage))
+            {
+                MessageBox.Show(
+                    LastStartupErrorMessage,
+                    $"{DisplayName} - 启动失败详情",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            else if (LastStartupResult == StartupResult.Failed)
+            {
+                MessageBox.Show(
+                    "暂无详细错误信息",
+                    $"{DisplayName} - 启动失败详情",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
         }
 
         #endregion

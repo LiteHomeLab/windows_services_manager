@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="设置"
-        Height="300" Width="450"
+        Height="480" Width="450"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Background="#F0F0F0">
@@ -33,6 +33,33 @@
                                    FontSize="11"
                                    TextWrapping="Wrap"
                                    Margin="20,0,0,0"/>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- 列显示设置组 -->
+                <GroupBox Header="列显示设置" Padding="15" Background="White" Margin="0,10,0,0">
+                    <StackPanel>
+                        <CheckBox Content="显示启动状态列"
+                                  IsChecked="{Binding ShowStartupStatusColumn}"
+                                  Margin="0,0,0,8"/>
+                        <CheckBox Content="显示启动参数列"
+                                  IsChecked="{Binding ShowArgumentsColumn}"
+                                  Margin="0,0,0,8"/>
+                        <CheckBox Content="显示状态列"
+                                  IsChecked="{Binding ShowStatusColumn}"
+                                  Margin="0,0,0,8"/>
+                        <CheckBox Content="显示依赖列"
+                                  IsChecked="{Binding ShowDependenciesColumn}"
+                                  Margin="0,0,0,8"/>
+                        <CheckBox Content="显示描述列"
+                                  IsChecked="{Binding ShowDescriptionColumn}"
+                                  Margin="0,0,0,8"/>
+                        <CheckBox Content="显示可执行文件列"
+                                  IsChecked="{Binding ShowExecutableColumn}"
+                                  Margin="0,0,0,8"/>
+                        <CheckBox Content="显示创建时间列"
+                                  IsChecked="{Binding ShowCreatedColumn}"
+                                  Margin="0,0,0,8"/>
                     </StackPanel>
                 </GroupBox>
 

@@ -189,6 +189,21 @@ namespace WinServiceManager.Models
         public Dictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
 
         /// <summary>
+        /// 最后一次启动结果
+        /// </summary>
+        public StartupResult LastStartupResult { get; set; } = StartupResult.Unknown;
+
+        /// <summary>
+        /// 最后一次启动错误消息
+        /// </summary>
+        public string? LastStartupErrorMessage { get; set; }
+
+        /// <summary>
+        /// 最后一次启动时间
+        /// </summary>
+        public DateTime? LastStartupTime { get; set; }
+
+        /// <summary>
         /// 服务目录路径
         /// </summary>
         public string ServiceDirectory => Path.Combine(

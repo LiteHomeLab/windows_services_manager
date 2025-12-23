@@ -27,7 +27,32 @@ namespace WinServiceManager.Services
             // 更新每个服务的实际状态
             foreach (var service in services)
             {
+                var oldResult = service.LastStartupResult;
+
                 service.Status = GetActualServiceStatus(service);
+
+                // 如果启动结果为 Unknown，根据当前状态自动设置
+                if (service.LastStartupResult == StartupResult.Unknown)
+                {
+                    service.LastStartupResult = service.Status switch
+                    {
+                        ServiceStatus.Running => StartupResult.Success,
+                        ServiceStatus.Starting => StartupResult.Warning,
+                        ServiceStatus.Stopped => StartupResult.Failed,
+                        ServiceStatus.Error => StartupResult.Failed,
+                        ServiceStatus.Stopping => StartupResult.Warning,
+                        ServiceStatus.Paused => StartupResult.Warning,
+                        // NotInstalled 保持 Unknown（可能刚创建还未安装）
+                        _ => StartupResult.Unknown
+                    };
+
+                    // 如果启动结果有变化，保存更新
+                    if (service.LastStartupResult != oldResult && service.LastStartupResult != StartupResult.Unknown)
+                    {
+                        service.UpdatedAt = DateTime.Now;
+                        await _dataStorage.UpdateServiceAsync(service);
+                    }
+                }
             }
 
             return services;
@@ -116,7 +141,17 @@ namespace WinServiceManager.Services
             if (result.Success)
             {
                 service.Status = ServiceStatus.Running;
+                service.LastStartupResult = StartupResult.Success;
+                service.LastStartupErrorMessage = null;
+                service.LastStartupTime = DateTime.Now;
                 service.UpdatedAt = DateTime.Now;
+                await _dataStorage.UpdateServiceAsync(service);
+            }
+            else
+            {
+                service.LastStartupResult = StartupResult.Failed;
+                service.LastStartupErrorMessage = result.ErrorMessage;
+                service.LastStartupTime = DateTime.Now;
                 await _dataStorage.UpdateServiceAsync(service);
             }
 

@@ -28,6 +28,14 @@
                 </StackPanel>
             </Button>
             <Separator/>
+            <Label Content="过滤:" Margin="10,0,5,0" VerticalAlignment="Center"/>
+            <ComboBox SelectedIndex="{Binding SelectedFilterIndex}" Width="100" MinWidth="80" Height="28">
+                <ComboBoxItem Content="全部"/>
+                <ComboBoxItem Content="启动成功"/>
+                <ComboBoxItem Content="启动失败"/>
+                <ComboBoxItem Content="警告"/>
+            </ComboBox>
+            <Separator/>
             <Button Command="{Binding SelectedService.StartCommand}"
                     CommandParameter="{Binding SelectedService}">
                 <StackPanel Orientation="Horizontal">
@@ -87,11 +95,41 @@
                       SelectionMode="Single">
                 <ListView.View>
                     <GridView>
-                        <GridViewColumn Header="服务名称" DisplayMemberBinding="{Binding DisplayName}" Width="180"/>
-                        <GridViewColumn Header="状态" DisplayMemberBinding="{Binding Status}" Width="90"/>
-                        <GridViewColumn Header="依赖" DisplayMemberBinding="{Binding DependenciesDisplay}" Width="80"/>
-                        <GridViewColumn Header="描述" DisplayMemberBinding="{Binding Description}" Width="200"/>
-                        <GridViewColumn Header="可执行文件" DisplayMemberBinding="{Binding ExecutablePath}" Width="180"/>
+                        <GridViewColumn Header="服务名称" DisplayMemberBinding="{Binding DisplayName}" Width="150"/>
+                        <GridViewColumn Header="启动状态" Width="100">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding StartupResultDisplay}"
+                                               Foreground="{Binding StartupResultColor}"
+                                               Cursor="Hand"
+                                               ToolTip="点击查看详情">
+                                        <TextBlock.InputBindings>
+                                            <MouseBinding Command="{Binding ShowStartupFailureDetailsCommand}"
+                                                          MouseAction="LeftClick"/>
+                                        </TextBlock.InputBindings>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <GridViewColumn Header="启动参数" Width="150">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding ArgumentsDisplay}"
+                                               ToolTip="{Binding FullArgumentsTooltip}"
+                                               Cursor="Hand"
+                                               ToolTipService.ShowDuration="5000">
+                                        <TextBlock.InputBindings>
+                                            <MouseBinding Command="{Binding CopyArgumentsCommand}"
+                                                          MouseAction="LeftClick"/>
+                                        </TextBlock.InputBindings>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <GridViewColumn Header="状态" DisplayMemberBinding="{Binding StatusDisplay}" Width="80"/>
+                        <GridViewColumn Header="依赖" DisplayMemberBinding="{Binding DependenciesDisplay}" Width="70"/>
+                        <GridViewColumn Header="描述" DisplayMemberBinding="{Binding Description}" Width="180"/>
+                        <GridViewColumn Header="可执行文件" DisplayMemberBinding="{Binding ExecutablePath}" Width="150"/>
                         <GridViewColumn Header="创建时间" DisplayMemberBinding="{Binding CreatedAt}" Width="130"/>
                     </GridView>
                 </ListView.View>
