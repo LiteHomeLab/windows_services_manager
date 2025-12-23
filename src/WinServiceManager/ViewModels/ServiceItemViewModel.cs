@@ -34,6 +34,11 @@ namespace WinServiceManager.ViewModels
     /// </summary>
     public partial class ServiceItemViewModel : BaseViewModel, IDisposable
     {
+        /// <summary>
+        /// 请求编辑服务事件
+        /// </summary>
+        public event EventHandler<ServiceItem>? EditRequested;
+
         private readonly ServiceManagerService _serviceManager;
         private ServiceItem _service;
         private bool _isBusy;
@@ -181,6 +186,11 @@ namespace WinServiceManager.ViewModels
         /// 是否可以卸载
         /// </summary>
         public bool CanUninstall => !IsBusy && Status.CanUninstall();
+
+        /// <summary>
+        /// 是否可以编辑（只有停止的服务才能编辑）
+        /// </summary>
+        public bool CanEdit => !IsBusy && (Status == ServiceStatus.Stopped || Status == ServiceStatus.NotInstalled);
 
         /// <summary>
         /// 依赖服务显示文本
@@ -390,6 +400,13 @@ namespace WinServiceManager.ViewModels
             }
         }
 
+        [RelayCommand(CanExecute = nameof(CanEdit))]
+        private void Edit()
+        {
+            // 触发编辑请求事件，由主窗口处理
+            EditRequested?.Invoke(this, Service);
+        }
+
         #endregion
 
         #region Private Methods
@@ -448,6 +465,7 @@ namespace WinServiceManager.ViewModels
             StopCommand.NotifyCanExecuteChanged();
             RestartCommand.NotifyCanExecuteChanged();
             UninstallCommand.NotifyCanExecuteChanged();
+            EditCommand.NotifyCanExecuteChanged();
         }
 
         #endregion

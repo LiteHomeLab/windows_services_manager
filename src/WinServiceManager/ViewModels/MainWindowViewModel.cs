@@ -135,6 +135,71 @@ namespace WinServiceManager.ViewModels
         }
 
         [RelayCommand]
+        private async Task EditServiceAsync(ServiceItemViewModel? serviceViewModel)
+        {
+            if (serviceViewModel == null)
+            {
+                MessageBox.Show("请先选择一个服务", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // 检查服务是否可以编辑
+            if (!serviceViewModel.CanEdit)
+            {
+                var statusText = serviceViewModel.Status switch
+                {
+                    ServiceStatus.Running => "运行中",
+                    ServiceStatus.Starting => "启动中",
+                    ServiceStatus.Stopping => "停止中",
+                    ServiceStatus.Installing => "安装中",
+                    ServiceStatus.Uninstalling => "卸载中",
+                    _ => "未知状态"
+                };
+
+                MessageBox.Show(
+                    $"无法编辑服务：服务当前状态为「{statusText}」。\n\n请先停止服务后再进行编辑。",
+                    "无法编辑",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                StatusMessage = $"准备编辑 {serviceViewModel.DisplayName}...";
+
+                // 创建 ViewModel
+                var editViewModel = new EditServiceViewModel(serviceViewModel.Service, _serviceManager, _dependencyValidator);
+
+                // 创建并显示对话框
+                var dialog = new EditServiceDialog(editViewModel)
+                {
+                    Owner = Application.Current.MainWindow
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    StatusMessage = "服务配置更新成功";
+                    await RefreshServicesAsync();
+                }
+                else
+                {
+                    StatusMessage = "取消编辑服务";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"编辑服务失败: {ex.Message}";
+                MessageBox.Show($"编辑服务时发生错误: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                await Task.Delay(2000);
+                StatusMessage = "就绪";
+            }
+        }
+
+        [RelayCommand]
         private async Task RefreshServicesAsync()
         {
             try
@@ -420,6 +485,7 @@ namespace WinServiceManager.ViewModels
                 {
                     var viewModel = new ServiceItemViewModel(s, _serviceManager);
                     viewModel.ViewLogsRequested += OnServiceViewLogsRequested;
+                    viewModel.EditRequested += OnServiceEditRequested;
                     return viewModel;
                 }).ToList();
 
@@ -472,6 +538,78 @@ namespace WinServiceManager.ViewModels
             {
                 StatusMessage = $"打开日志查看器失败: {ex.Message}";
                 MessageBox.Show($"无法打开日志查看器: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                await Task.Delay(2000);
+                StatusMessage = "就绪";
+            }
+        }
+
+        /// <summary>
+        /// 处理服务编辑请求
+        /// </summary>
+        private async void OnServiceEditRequested(object? sender, ServiceItem service)
+        {
+            try
+            {
+                StatusMessage = $"准备编辑 {service.DisplayName}...";
+
+                // 查找对应的 ServiceItemViewModel
+                var serviceViewModel = _allServices.FirstOrDefault(vm => vm.Service.Id == service.Id);
+                if (serviceViewModel == null)
+                {
+                    StatusMessage = "找不到要编辑的服务";
+                    return;
+                }
+
+                // 检查服务是否可以编辑
+                if (!serviceViewModel.CanEdit)
+                {
+                    var statusText = serviceViewModel.Status switch
+                    {
+                        ServiceStatus.Running => "运行中",
+                        ServiceStatus.Starting => "启动中",
+                        ServiceStatus.Stopping => "停止中",
+                        ServiceStatus.Installing => "安装中",
+                        ServiceStatus.Uninstalling => "卸载中",
+                        _ => "未知状态"
+                    };
+
+                    MessageBox.Show(
+                        $"无法编辑服务：服务当前状态为「{statusText}」。\n\n请先停止服务后再进行编辑。",
+                        "无法编辑",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    StatusMessage = "服务当前无法编辑";
+                    await Task.Delay(2000);
+                    StatusMessage = "就绪";
+                    return;
+                }
+
+                // 创建 ViewModel
+                var editViewModel = new EditServiceViewModel(service, _serviceManager, _dependencyValidator);
+
+                // 创建并显示对话框
+                var dialog = new EditServiceDialog(editViewModel)
+                {
+                    Owner = Application.Current.MainWindow
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    StatusMessage = "服务配置更新成功";
+                    await RefreshServicesAsync();
+                }
+                else
+                {
+                    StatusMessage = "取消编辑服务";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"编辑服务失败: {ex.Message}";
+                MessageBox.Show($"编辑服务时发生错误: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -548,12 +686,13 @@ namespace WinServiceManager.ViewModels
                 // 取消订阅状态监控
                 _statusMonitor?.Unsubscribe(OnServicesUpdated);
 
-                // 取消订阅ViewLogsRequested事件并释放资源
+                // 取消订阅ViewLogsRequested和EditRequested事件并释放资源
                 foreach (var service in Services)
                 {
                     if (service is ServiceItemViewModel serviceViewModel)
                     {
                         serviceViewModel.ViewLogsRequested -= OnServiceViewLogsRequested;
+                        serviceViewModel.EditRequested -= OnServiceEditRequested;
                     }
 
                     if (service is IDisposable disposableService)
@@ -567,6 +706,7 @@ namespace WinServiceManager.ViewModels
                     if (service is ServiceItemViewModel serviceViewModel)
                     {
                         serviceViewModel.ViewLogsRequested -= OnServiceViewLogsRequested;
+                        serviceViewModel.EditRequested -= OnServiceEditRequested;
                     }
 
                     if (service is IDisposable disposableService)

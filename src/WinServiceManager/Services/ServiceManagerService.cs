@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.ServiceProcess;
 using System.Threading.Tasks;
@@ -225,6 +226,59 @@ namespace WinServiceManager.Services
                 "disabled" => ServiceStartupMode.Disabled,
                 _ => ServiceStartupMode.Automatic
             };
+        }
+
+        /// <summary>
+        /// 更新服务配置
+        /// </summary>
+        /// <param name="request">更新服务请求</param>
+        /// <returns>操作结果</returns>
+        public async Task<ServiceOperationResult> UpdateServiceAsync(ServiceUpdateRequest request)
+        {
+            try
+            {
+                // 加载现有服务
+                var services = await _dataStorage.LoadServicesAsync();
+                var existingService = services.FirstOrDefault(s => s.Id == request.Id);
+
+                if (existingService == null)
+                {
+                    return ServiceOperationResult.FailureResult(ServiceOperationType.Update, $"服务ID {request.Id} 不存在");
+                }
+
+                // 更新服务属性
+                existingService.DisplayName = request.DisplayName;
+                existingService.Description = request.Description ?? "Managed by WinServiceManager";
+                existingService.ExecutablePath = request.ExecutablePath;
+                existingService.ScriptPath = request.ScriptPath;
+                existingService.Arguments = request.Arguments;
+                existingService.WorkingDirectory = request.WorkingDirectory;
+                existingService.Dependencies = request.Dependencies ?? new List<string>();
+                existingService.EnvironmentVariables = request.EnvironmentVariables ?? new Dictionary<string, string>();
+                existingService.ServiceAccount = request.ServiceAccount;
+                existingService.StartMode = ParseStartMode(request.StartMode);
+                existingService.StopTimeout = request.StopTimeout;
+                existingService.UpdatedAt = DateTime.Now;
+
+                // 确保服务目录存在
+                if (!Directory.Exists(existingService.ServiceDirectory))
+                {
+                    Directory.CreateDirectory(existingService.ServiceDirectory);
+                }
+
+                // 生成新的 WinSW 配置文件
+                var configContent = existingService.GenerateWinSWConfig();
+                await File.WriteAllTextAsync(existingService.WinSWConfigPath, configContent);
+
+                // 更新数据存储
+                await _dataStorage.UpdateServiceAsync(existingService);
+
+                return ServiceOperationResult.SuccessResult(ServiceOperationType.Update);
+            }
+            catch (Exception ex)
+            {
+                return ServiceOperationResult.FailureResult(ServiceOperationType.Update, $"更新服务配置失败: {ex.Message}");
+            }
         }
     }
 }
