@@ -1,7 +1,15 @@
 @echo off
 setlocal enabledelayedexpansion
 
+REM Get the project root directory (two levels up from script location)
+set SCRIPT_DIR=%~dp0
+set PROJECT_ROOT=%SCRIPT_DIR%..\..\
+
+REM Convert to absolute path
+for %%i in ("%PROJECT_ROOT%") do set PROJECT_ROOT=%%~fi
+
 echo Starting build process...
+echo Project root: %PROJECT_ROOT%
 echo.
 
 REM Set default configuration
@@ -54,15 +62,15 @@ echo.
 
 REM Clean previous builds
 echo Cleaning previous builds...
-dotnet clean src\WinServiceManager\WinServiceManager.csproj -c %CONFIGURATION% -p:Platform=%PLATFORM%
+dotnet clean "%PROJECT_ROOT%src\WinServiceManager\WinServiceManager.csproj" -c %CONFIGURATION% -p:Platform=%PLATFORM%
 
 REM Restore packages
 echo Restoring NuGet packages...
-dotnet restore src\WinServiceManager\WinServiceManager.csproj
+dotnet restore "%PROJECT_ROOT%src\WinServiceManager\WinServiceManager.csproj"
 
 REM Build the main project only (excluding tests to avoid build failures)
 echo Building main project...
-dotnet build src\WinServiceManager\WinServiceManager.csproj -c %CONFIGURATION% -p:Platform=%PLATFORM% --no-restore
+dotnet build "%PROJECT_ROOT%src\WinServiceManager\WinServiceManager.csproj" -c %CONFIGURATION% -p:Platform=%PLATFORM% --no-restore
 
 if %ERRORLEVEL% neq 0 (
     echo Build failed!
@@ -74,15 +82,15 @@ if /i "%PUBLISH%"=="true" (
     echo Publishing application...
 
     set RID=win-%PLATFORM%
-    set PUBLISH_PATH=%OUTPUT_PATH%\%RID%
+    set PUBLISH_PATH=%PROJECT_ROOT%%OUTPUT_PATH%\%RID%
 
-    dotnet publish src\WinServiceManager\WinServiceManager.csproj ^
+    dotnet publish "%PROJECT_ROOT%src\WinServiceManager\WinServiceManager.csproj" ^
         -c %CONFIGURATION% ^
         -r %RID% ^
         --self-contained false ^
         -p:PublishSingleFile=false ^
         -p:PublishReadyToRun=true ^
-        -o %PUBLISH_PATH%
+        -o "%PUBLISH_PATH%"
 
     if %ERRORLEVEL% neq 0 (
         echo Publish failed!
@@ -96,18 +104,20 @@ if /i "%PUBLISH%"=="true" (
     if not exist "%PUBLISH_PATH%\templates" mkdir "%PUBLISH_PATH%\templates"
 
     REM Copy WinSW executable if exists
-    if exist "templates\WinSW-x64.exe" (
-        copy "templates\WinSW-x64.exe" "%PUBLISH_PATH%\templates\WinSW-x64.exe" >nul
+    if exist "%PROJECT_ROOT%src\WinServiceManager\templates\WinSW-x64.exe" (
+        copy "%PROJECT_ROOT%src\WinServiceManager\templates\WinSW-x64.exe" "%PUBLISH_PATH%\templates\WinSW-x64.exe" >nul
         echo Copied WinSW executable
     ) else (
-        echo Warning: WinSW executable not found at templates\WinSW-x64.exe
+        echo Warning: WinSW executable not found at src\WinServiceManager\templates\WinSW-x64.exe
     )
 
     REM Create distribution package
-    for /f "tokens=3 delims=<> " %%i in ('findstr "AssemblyVersion" src\WinServiceManager\WinServiceManager.csproj') do set VERSION=%%i
+    for /f "delims=" %%i in ('type "%PROJECT_ROOT%src\WinServiceManager\WinServiceManager.csproj" ^| findstr /r /c:"<AssemblyVersion>"') do (
+        for /f "tokens=3 delims=><" %%v in ("%%i") do set VERSION=%%v
+    )
     if "!VERSION!"=="" set VERSION=1.0.0
     set PACKAGE_NAME=WinServiceManager-v!VERSION!-%RID%
-    set PACKAGE_PATH=%OUTPUT_PATH%\%PACKAGE_NAME%
+    set PACKAGE_PATH=%PROJECT_ROOT%%OUTPUT_PATH%\%PACKAGE_NAME%
 
     if exist "%PACKAGE_PATH%" rmdir /s /q "%PACKAGE_PATH%"
     mkdir "%PACKAGE_PATH%"
@@ -146,9 +156,9 @@ echo.
 echo Build process completed successfully!
 echo.
 echo Output location:
-echo src\WinServiceManager\bin\%PLATFORM%\%CONFIGURATION%\net8.0-windows\
+echo %PROJECT_ROOT%src\WinServiceManager\bin\%PLATFORM%\%CONFIGURATION%\net8.0-windows\
 echo.
 echo Main executable:
-echo src\WinServiceManager\bin\%PLATFORM%\%CONFIGURATION%\net8.0-windows\WinServiceManager.exe
+echo %PROJECT_ROOT%src\WinServiceManager\bin\%PLATFORM%\%CONFIGURATION%\net8.0-windows\WinServiceManager.exe
 echo.
 pause
