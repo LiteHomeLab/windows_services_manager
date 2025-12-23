@@ -96,10 +96,14 @@ namespace WinServiceManager.ViewModels
                         OnPropertyChanged(nameof(IsScriptFileEnabled));
                     }
 
-                    // 自动设置工作目录
-                    if (!string.IsNullOrEmpty(value) && string.IsNullOrEmpty(WorkingDirectory))
+                    // 自动设置工作目录为可执行文件所在目录
+                    if (!string.IsNullOrEmpty(value))
                     {
-                        WorkingDirectory = Path.GetDirectoryName(value) ?? string.Empty;
+                        string? dir = Path.GetDirectoryName(value);
+                        if (!string.IsNullOrEmpty(dir))
+                        {
+                            WorkingDirectory = dir;
+                        }
                     }
 
                     ValidateProperty();
@@ -135,6 +139,7 @@ namespace WinServiceManager.ViewModels
                 if (SetProperty(ref _arguments, value))
                 {
                     ValidateProperty();
+                    OnPropertyChanged(nameof(CanCreate));
                 }
             }
         }
@@ -285,9 +290,9 @@ namespace WinServiceManager.ViewModels
         public bool HasDependencies => SelectedDependencies.Any();
 
         /// <summary>
-        /// 是否可以创建服务
+        /// 是否可以创建服务（仅检查忙碌状态，验证在点击时进行）
         /// </summary>
-        public bool CanCreate => !IsBusy && IsValid();
+        public bool CanCreate => !IsBusy;
 
         #endregion
 
@@ -740,8 +745,8 @@ namespace WinServiceManager.ViewModels
                 errors.Add("工作目录路径包含非法字符");
             }
 
-            // 验证启动参数
-            if (!CommandValidator.IsValidInput(Arguments))
+            // 验证启动参数（仅当非空时验证）
+            if (!string.IsNullOrWhiteSpace(Arguments) && !CommandValidator.IsValidInput(Arguments))
             {
                 errors.Add("启动参数包含非法字符");
             }

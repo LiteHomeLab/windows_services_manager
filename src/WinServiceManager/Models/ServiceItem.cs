@@ -262,7 +262,7 @@ namespace WinServiceManager.Models
                     new XElement("name", SecurityElement.Escape(DisplayName)),
                     new XElement("description", SecurityElement.Escape(Description)),
                     new XElement("executable", SecurityElement.Escape(ExecutablePath)),
-                    new XElement("arguments", SecurityElement.Escape(GetFullArguments())),
+                    new XElement("arguments", new XCData(GetFullArguments())),
                     new XElement("workingdirectory", SecurityElement.Escape(WorkingDirectory)),
                     new XElement("log", new XAttribute("mode", LogMode),
                         new XElement("sizeThreshold", 10240),

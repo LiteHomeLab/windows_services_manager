@@ -6,7 +6,7 @@
         xmlns:converters="clr-namespace:WinServiceManager.Converters"
         mc:Ignorable="d"
         Title="创建新服务"
-        Height="900" Width="800"
+        Height="750" Width="800"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Background="#F0F0F0">
@@ -25,31 +25,11 @@
         </Style>
     </Window.Resources>
 
-  <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="20"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="20"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="20"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="20"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="20"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="20"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="20"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="20"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="20"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="20" Orientation="Vertical">
 
         <!-- 服务信息组 -->
-        <GroupBox Grid.Row="0" Header="服务信息" Padding="15" Background="White">
+        <GroupBox Header="服务信息" Padding="15" Background="White" Margin="0,0,0,15">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -79,7 +59,7 @@
         </GroupBox>
 
         <!-- 执行配置组 -->
-        <GroupBox Grid.Row="2" Header="执行配置" Padding="15" Background="White">
+        <GroupBox Header="执行配置" Padding="15" Background="White" Margin="0,0,0,15">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -153,7 +133,7 @@
         </GroupBox>
 
         <!-- 依赖服务配置 -->
-        <GroupBox Grid.Row="4" Header="依赖服务配置" Padding="15" Background="White">
+        <GroupBox Header="依赖服务配置" Padding="15" Background="White" Margin="0,0,0,15">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -228,7 +208,7 @@
         </GroupBox>
 
         <!-- 服务账户配置 -->
-        <GroupBox Grid.Row="6" Header="服务账户配置" Padding="15" Background="White">
+        <GroupBox Header="服务账户配置" Padding="15" Background="White" Margin="0,0,0,15">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -296,7 +276,7 @@
         </GroupBox>
 
         <!-- 环境变量配置 -->
-        <GroupBox Grid.Row="7" Header="环境变量配置" Padding="15" Background="White">
+        <GroupBox Header="环境变量配置" Padding="15" Background="White" Margin="0,0,0,15">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -373,12 +353,12 @@
         </GroupBox>
 
         <!-- 错误信息 -->
-        <Border Grid.Row="9"
-                Background="#FFEBEE"
+        <Border Background="#FFEBEE"
                 BorderBrush="#F44336"
                 BorderThickness="1"
                 CornerRadius="3"
                 Padding="10"
+                Margin="0,0,0,15"
                 Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="⚠" Foreground="#F44336" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
@@ -390,7 +370,7 @@
         </Border>
 
         <!-- 配置预览 -->
-        <GroupBox Grid.Row="11" Header="配置预览" Padding="15" Background="White" Visibility="{Binding ShowPreview, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <GroupBox Header="配置预览" Padding="15" Background="White" Margin="0,0,0,15" Visibility="{Binding ShowPreview, Converter={StaticResource BooleanToVisibilityConverter}}">
             <ScrollViewer Height="120" VerticalScrollBarVisibility="Auto">
                 <TextBlock Text="{Binding ConfigPreview}"
                            FontFamily="Consolas"
@@ -401,10 +381,8 @@
         </GroupBox>
 
         <!-- 按钮区域 -->
-        <StackPanel Grid.Row="14"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right"
-                    Margin="0,15,0,0">
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Right">
             <Button Content="预览配置"
                     Command="{Binding PreviewConfigCommand}"
                     Width="100"
@@ -427,5 +405,6 @@
                     Background="#757575"
                     Foreground="White"/>
         </StackPanel>
-    </Grid>
+        </StackPanel>
+    </ScrollViewer>
 </Window>

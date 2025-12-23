@@ -185,15 +185,27 @@ namespace WinServiceManager.Services
                 return;
 
             var normalizedPath = Path.GetFullPath(filePath);
+            int consecutiveErrors = 0;
+            const int MAX_CONSECUTIVE_ERRORS = 10;
 
             while (!cancellationToken.IsCancellationRequested && !_disposed)
             {
                 try
                 {
+                    // 检查文件是否存在
+                    if (!File.Exists(normalizedPath))
+                    {
+                        // 文件不存在，等待后继续检查
+                        await Task.Delay(2000, cancellationToken);
+                        continue;
+                    }
+
                     // 读取新行
                     var newLines = await ReadNewLinesAsync(normalizedPath);
                     if (newLines != null && newLines.Count > 0)
                     {
+                        consecutiveErrors = 0; // 重置错误计数
+
                         // 通知订阅者
                         if (_subscriptions.TryGetValue(normalizedPath, out var actions))
                         {
@@ -224,7 +236,16 @@ namespace WinServiceManager.Services
                 }
                 catch (Exception ex)
                 {
+                    consecutiveErrors++;
                     System.Diagnostics.Debug.WriteLine($"Monitor error: {ex.Message}");
+
+                    // 如果连续错误过多，停止监控
+                    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS)
+                    {
+                        _logger?.LogError($"Too many consecutive errors monitoring {normalizedPath}, stopping monitoring");
+                        break;
+                    }
+
                     await Task.Delay(1000, cancellationToken); // 出错后等待更长时间
                 }
             }
@@ -410,6 +431,20 @@ namespace WinServiceManager.Services
 
                 if (string.IsNullOrEmpty(directory) || string.IsNullOrEmpty(fileName))
                     return;
+
+                // 检查目录是否存在，不存在则创建
+                if (!Directory.Exists(directory))
+                {
+                    try
+                    {
+                        Directory.CreateDirectory(directory);
+                    }
+                    catch
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Cannot create directory: {directory}");
+                        return;
+                    }
+                }
 
                 var watcher = new FileSystemWatcher(directory, fileName)
                 {

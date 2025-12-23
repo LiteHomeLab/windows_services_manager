@@ -345,10 +345,11 @@ namespace WinServiceManager.ViewModels
         [RelayCommand]
         private async Task RefreshStatusAsync()
         {
-            await ExecuteOperationAsync(async () =>
+            await ExecuteOperationAsync(() =>
             {
                 var actualStatus = _serviceManager.GetActualServiceStatus(Service);
                 Status = actualStatus;
+                return Task.CompletedTask;
             });
         }
 
