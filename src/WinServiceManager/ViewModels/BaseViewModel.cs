@@ -9,6 +9,8 @@ namespace WinServiceManager.ViewModels
 
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
+            // 添加日志以调试
+            System.Diagnostics.Debug.WriteLine($"[BaseViewModel] OnPropertyChanged: {GetType().Name}.{propertyName}");
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 

@@ -203,6 +203,11 @@ namespace WinServiceManager.Tests.Fixtures
             return Task.FromResult(service);
         }
 
+        public Task<ServiceItem?> LoadServiceAsync(string id)
+        {
+            return GetServiceAsync(id);
+        }
+
         public Task AddServiceAsync(ServiceItem service)
         {
             var services = LoadServicesAsync().Result;

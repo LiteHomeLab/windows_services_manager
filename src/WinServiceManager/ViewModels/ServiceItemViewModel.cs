@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -40,13 +41,17 @@ namespace WinServiceManager.ViewModels
         public event EventHandler<ServiceItem>? EditRequested;
 
         private readonly ServiceManagerService _serviceManager;
+        private readonly ServicePollingCoordinator? _pollingCoordinator;
         private ServiceItem _service;
         private bool _isBusy;
+        private ServiceStatus _cachedStatus;  // 缓存状态以避免绑定问题
 
-        public ServiceItemViewModel(ServiceItem service, ServiceManagerService serviceManager)
+        public ServiceItemViewModel(ServiceItem service, ServiceManagerService serviceManager, ServicePollingCoordinator? pollingCoordinator = null)
         {
             _service = service ?? throw new ArgumentNullException(nameof(service));
             _serviceManager = serviceManager ?? throw new ArgumentNullException(nameof(serviceManager));
+            _pollingCoordinator = pollingCoordinator;
+            _cachedStatus = service.Status;  // 初始化缓存状态
         }
 
         /// <summary>
@@ -80,12 +85,14 @@ namespace WinServiceManager.ViewModels
         /// </summary>
         public ServiceStatus Status
         {
-            get => Service.Status;
+            get => _cachedStatus;
             private set
             {
-                if (Service.Status != value)
+                if (_cachedStatus != value)
                 {
-                    Service.Status = value;
+                    _cachedStatus = value;
+                    Service.Status = value;  // 同时更新底层对象
+                    // 总是触发通知，确保 UI 更新
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(StatusDisplay));
                     OnPropertyChanged(nameof(StatusColor));
@@ -230,80 +237,82 @@ namespace WinServiceManager.ViewModels
             if (Status == ServiceStatus.NotInstalled)
             {
                 // 如果服务未安装，需要先安装
-                var result = await _serviceManager.InstallServiceAsync(Service);
-                if (!result.Success)
+                var installResult = await _serviceManager.InstallServiceAsync(Service);
+                if (!installResult.Success)
                 {
-                    ShowError($"启动服务失败: {result.ErrorMessage}");
+                    ShowError($"启动服务失败: {installResult.ErrorMessage}");
                     return;
                 }
             }
 
-            await ExecuteOperationAsync(async () =>
-            {
-                Status = ServiceStatus.Starting;
-                var result = await _serviceManager.StartServiceAsync(Service);
+            // 先设置为启动中状态
+            Status = ServiceStatus.Starting;
 
-                if (result.Success)
-                {
-                    Status = ServiceStatus.Running;
-                }
-                else
-                {
-                    Status = ServiceStatus.Stopped;
-                    ShowError($"启动服务失败: {result.ErrorMessage}");
-                }
-            });
+            var startResult = await _serviceManager.StartServiceAsync(Service);
+
+            if (!startResult.Success)
+            {
+                Status = ServiceStatus.Stopped;
+                ShowError($"启动服务失败: {startResult.ErrorMessage}");
+                return;
+            }
+
+            // 操作成功后通知协调器开始监控此服务
+            _pollingCoordinator?.AddPendingService(Service.Id);
         }
 
         [RelayCommand(CanExecute = nameof(CanStop))]
         private async Task StopAsync()
         {
-            await ExecuteOperationAsync(async () =>
-            {
-                Status = ServiceStatus.Stopping;
-                var result = await _serviceManager.StopServiceAsync(Service);
+            // 先设置为停止中状态
+            Status = ServiceStatus.Stopping;
 
-                if (result.Success)
-                {
-                    Status = ServiceStatus.Stopped;
-                }
-                else
-                {
-                    Status = ServiceStatus.Running;
-                    ShowError($"停止服务失败: {result.ErrorMessage}");
-                }
-            });
+            var result = await _serviceManager.StopServiceAsync(Service);
+
+            if (!result.Success)
+            {
+                Status = ServiceStatus.Running;
+                ShowError($"停止服务失败: {result.ErrorMessage}");
+                return;
+            }
+
+            // 操作成功后通知协调器开始监控此服务
+            _pollingCoordinator?.AddPendingService(Service.Id);
         }
 
         [RelayCommand(CanExecute = nameof(CanRestart))]
         private async Task RestartAsync()
         {
-            await ExecuteOperationAsync(async () =>
+            // 先停止服务
+            Status = ServiceStatus.Stopping;
+            var stopResult = await _serviceManager.StopServiceAsync(Service);
+
+            if (!stopResult.Success)
             {
-                Status = ServiceStatus.Stopping;
-                var stopResult = await _serviceManager.StopServiceAsync(Service);
+                Status = ServiceStatus.Running;
+                ShowError($"停止服务失败（重启操作）: {stopResult.ErrorMessage}");
+                return;
+            }
 
-                if (stopResult.Success)
-                {
-                    Status = ServiceStatus.Starting;
-                    var startResult = await _serviceManager.StartServiceAsync(Service);
+            // 通知协调器监控停止状态
+            _pollingCoordinator?.AddPendingService(Service.Id);
 
-                    if (startResult.Success)
-                    {
-                        Status = ServiceStatus.Running;
-                    }
-                    else
-                    {
-                        Status = ServiceStatus.Stopped;
-                        ShowError($"重启服务失败: {startResult.ErrorMessage}");
-                    }
-                }
-                else
-                {
-                    Status = ServiceStatus.Running;
-                    ShowError($"停止服务失败（重启操作）: {stopResult.ErrorMessage}");
-                }
-            });
+            // 等待一小段时间确保停止操作完成
+            await Task.Delay(1000);
+
+            // 启动服务
+            Status = ServiceStatus.Starting;
+            var startResult = await _serviceManager.StartServiceAsync(Service);
+
+            if (!startResult.Success)
+            {
+                Status = ServiceStatus.Stopped;
+                ShowError($"重启服务失败: {startResult.ErrorMessage}");
+                return;
+            }
+
+            // 再次通知协调器监控启动状态
+            _pollingCoordinator?.AddPendingService(Service.Id);
         }
 
         [RelayCommand(CanExecute = nameof(CanUninstall))]
@@ -319,48 +328,53 @@ namespace WinServiceManager.ViewModels
             if (result != MessageBoxResult.Yes)
                 return;
 
-            await ExecuteOperationAsync(async () =>
+            // 先停止服务（如果正在运行）
+            if (Status == ServiceStatus.Running)
             {
-                // 先停止服务（如果正在运行）
-                if (Status == ServiceStatus.Running)
+                Status = ServiceStatus.Stopping;
+                var stopResult = await _serviceManager.StopServiceAsync(Service);
+                if (!stopResult.Success)
                 {
-                    Status = ServiceStatus.Stopping;
-                    var stopResult = await _serviceManager.StopServiceAsync(Service);
-                    if (!stopResult.Success)
-                    {
-                        Status = ServiceStatus.Running;
-                        ShowError($"停止服务失败（卸载前）: {stopResult.ErrorMessage}");
-                        return;
-                    }
+                    Status = ServiceStatus.Running;
+                    ShowError($"停止服务失败（卸载前）: {stopResult.ErrorMessage}");
+                    return;
                 }
+            }
 
-                // 卸载服务
-                Status = ServiceStatus.Uninstalling;
-                var uninstallResult = await _serviceManager.UninstallServiceAsync(Service);
+            // 卸载服务
+            Status = ServiceStatus.Uninstalling;
+            var uninstallResult = await _serviceManager.UninstallServiceAsync(Service);
 
-                if (uninstallResult.Success)
-                {
-                    Status = ServiceStatus.NotInstalled;
-                    MessageBox.Show($"服务 '{DisplayName}' 已成功卸载。", "卸载成功",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                else
-                {
-                    Status = ServiceStatus.Stopped;
-                    ShowError($"卸载服务失败: {uninstallResult.ErrorMessage}");
-                }
-            });
+            if (uninstallResult.Success)
+            {
+                Status = ServiceStatus.NotInstalled;
+                MessageBox.Show($"服务 '{DisplayName}' 已成功卸载。", "卸载成功",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                Status = ServiceStatus.Stopped;
+                ShowError($"卸载服务失败: {uninstallResult.ErrorMessage}");
+            }
         }
 
         [RelayCommand]
-        private async Task RefreshStatusAsync()
+        private void RefreshStatus()
         {
-            await ExecuteOperationAsync(() =>
+            try
             {
+                IsBusy = true;
                 var actualStatus = _serviceManager.GetActualServiceStatus(Service);
                 Status = actualStatus;
-                return Task.CompletedTask;
-            });
+            }
+            catch (Exception ex)
+            {
+                ShowError($"刷新状态失败: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         [RelayCommand]
@@ -412,31 +426,6 @@ namespace WinServiceManager.ViewModels
         #region Private Methods
 
         /// <summary>
-        /// 执行操作，处理忙状态和异常
-        /// </summary>
-        private async Task ExecuteOperationAsync(Func<Task> operation)
-        {
-            try
-            {
-                IsBusy = true;
-                await operation();
-            }
-            catch (Exception ex)
-            {
-                ShowError($"操作失败: {ex.Message}");
-                // 恢复到安全状态
-                if (Status.IsTransitioning())
-                {
-                    Status = ServiceStatus.Stopped;
-                }
-            }
-            finally
-            {
-                IsBusy = false;
-            }
-        }
-
-        /// <summary>
         /// 显示错误信息
         /// </summary>
         private void ShowError(string message)
@@ -453,7 +442,10 @@ namespace WinServiceManager.ViewModels
         /// </summary>
         public void UpdateStatus(ServiceStatus newStatus)
         {
+            var oldStatus = Status;
             Status = newStatus;
+            // 添加日志验证
+            System.Diagnostics.Debug.WriteLine($"[ServiceItemViewModel] UpdateStatus: {Service.Id} {oldStatus} -> {newStatus}, current Status: {Status}");
         }
 
         /// <summary>
@@ -466,6 +458,21 @@ namespace WinServiceManager.ViewModels
             RestartCommand.NotifyCanExecuteChanged();
             UninstallCommand.NotifyCanExecuteChanged();
             EditCommand.NotifyCanExecuteChanged();
+        }
+
+        /// <summary>
+        /// 刷新属性显示（当 Service 对象的属性被外部更新时调用）
+        /// </summary>
+        public void RefreshProperties()
+        {
+            OnPropertyChanged(nameof(DisplayName));
+            OnPropertyChanged(nameof(Description));
+            OnPropertyChanged(nameof(ExecutablePath));
+            OnPropertyChanged(nameof(WorkingDirectory));
+            OnPropertyChanged(nameof(Arguments));
+            OnPropertyChanged(nameof(DependenciesDisplay));
+            OnPropertyChanged(nameof(DependenciesDetails));
+            OnPropertyChanged(nameof(CreatedAt));
         }
 
         #endregion

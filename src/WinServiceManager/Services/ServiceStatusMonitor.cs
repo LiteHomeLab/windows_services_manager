@@ -28,7 +28,7 @@ namespace WinServiceManager.Services
             _performanceMonitor = performanceMonitor;
         }
 
-        public void StartMonitoring(int intervalSeconds = 30)
+        public void StartMonitoring(int intervalSeconds = 10)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(ServiceStatusMonitor));

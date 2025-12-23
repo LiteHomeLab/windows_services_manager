@@ -175,6 +175,23 @@ namespace WinServiceManager.Services
             return result;
         }
 
+        /// <summary>
+        /// 根据服务ID获取服务状态
+        /// </summary>
+        /// <param name="serviceId">服务ID</param>
+        /// <returns>服务状态</returns>
+        public async Task<ServiceStatus> GetServiceStatusByIdAsync(string serviceId)
+        {
+            var service = await _dataStorage.LoadServiceAsync(serviceId);
+            if (service == null)
+            {
+                return ServiceStatus.NotInstalled;
+            }
+
+            var status = GetActualServiceStatus(service);
+            return status;
+        }
+
         public ServiceStatus GetActualServiceStatus(ServiceItem service)
         {
             try

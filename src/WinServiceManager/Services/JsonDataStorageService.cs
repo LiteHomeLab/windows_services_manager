@@ -131,6 +131,14 @@ namespace WinServiceManager.Services
             }
         }
 
+        /// <summary>
+        /// 根据服务ID加载单个服务
+        /// </summary>
+        public async Task<ServiceItem?> LoadServiceAsync(string id)
+        {
+            return await GetServiceAsync(id);
+        }
+
         public async Task<ServiceItem?> GetServiceAsync(string id)
         {
             if (string.IsNullOrWhiteSpace(id))

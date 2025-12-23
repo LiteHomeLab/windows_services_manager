@@ -22,6 +22,7 @@ namespace WinServiceManager.ViewModels
     {
         private readonly ServiceManagerService _serviceManager;
         private readonly ServiceStatusMonitor _statusMonitor;
+        private readonly ServicePollingCoordinator _pollingCoordinator;
         private readonly LogReaderService _logReaderService;
         private readonly ILogger<MainWindowViewModel> _logger;
         private readonly ServiceDependencyValidator _dependencyValidator;
@@ -77,18 +78,23 @@ namespace WinServiceManager.ViewModels
         public MainWindowViewModel(
             ServiceManagerService serviceManager,
             ServiceStatusMonitor statusMonitor,
+            ServicePollingCoordinator pollingCoordinator,
             LogReaderService logReaderService,
             ILogger<MainWindowViewModel> logger,
             ServiceDependencyValidator dependencyValidator)
         {
             _serviceManager = serviceManager ?? throw new ArgumentNullException(nameof(serviceManager));
             _statusMonitor = statusMonitor ?? throw new ArgumentNullException(nameof(statusMonitor));
+            _pollingCoordinator = pollingCoordinator ?? throw new ArgumentNullException(nameof(pollingCoordinator));
             _logReaderService = logReaderService ?? throw new ArgumentNullException(nameof(logReaderService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _dependencyValidator = dependencyValidator ?? throw new ArgumentNullException(nameof(dependencyValidator));
 
-            // 订阅状态更新
+            // 订阅全局状态更新（ServiceStatusMonitor 的 30秒轮询）
             _statusMonitor.Subscribe(OnServicesUpdated);
+
+            // 订阅协调器状态更新（操作后的高频轮询）
+            _pollingCoordinator.ServicesUpdated += OnPollingCoordinatorServicesUpdated;
 
             // 初始加载
             _ = RefreshServicesAsync();
@@ -483,7 +489,7 @@ namespace WinServiceManager.ViewModels
                 // 创建新的 ViewModel 列表并订阅ViewLogsRequested事件
                 var newServices = services.Select(s =>
                 {
-                    var viewModel = new ServiceItemViewModel(s, _serviceManager);
+                    var viewModel = new ServiceItemViewModel(s, _serviceManager, _pollingCoordinator);
                     viewModel.ViewLogsRequested += OnServiceViewLogsRequested;
                     viewModel.EditRequested += OnServiceEditRequested;
                     return viewModel;
@@ -505,11 +511,77 @@ namespace WinServiceManager.ViewModels
         }
 
         /// <summary>
-        /// 处理服务状态更新
+        /// 处理服务状态更新（来自 ServiceStatusMonitor）
         /// </summary>
         private async void OnServicesUpdated(System.Collections.Generic.List<ServiceItem> services)
         {
-            await UpdateServicesAsync(services);
+            // 不要重建整个列表，只更新状态和属性
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                foreach (var updatedService in services)
+                {
+                    var existingViewModel = _allServices.FirstOrDefault(vm => vm.Service.Id == updatedService.Id);
+                    if (existingViewModel != null)
+                    {
+                        // 更新底层 Service 对象的属性（不包括状态，状态由协调器管理）
+                        existingViewModel.Service.DisplayName = updatedService.DisplayName;
+                        existingViewModel.Service.Description = updatedService.Description;
+                        existingViewModel.Service.ExecutablePath = updatedService.ExecutablePath;
+                        existingViewModel.Service.Arguments = updatedService.Arguments;
+                        existingViewModel.Service.WorkingDirectory = updatedService.WorkingDirectory;
+                        existingViewModel.Service.UpdatedAt = updatedService.UpdatedAt;
+
+                        // 刷新显示
+                        existingViewModel.RefreshProperties();
+                    }
+                    else
+                    {
+                        // 新服务，创建新的 ViewModel
+                        var newViewModel = new ServiceItemViewModel(updatedService, _serviceManager, _pollingCoordinator);
+                        newViewModel.ViewLogsRequested += OnServiceViewLogsRequested;
+                        newViewModel.EditRequested += OnServiceEditRequested;
+                        _allServices.Add(newViewModel);
+                    }
+                }
+
+                // 移除已删除的服务
+                var removedServices = _allServices
+                    .Where(vm => !services.Any(s => s.Id == vm.Service.Id))
+                    .ToList();
+
+                foreach (var removed in removedServices)
+                {
+                    _allServices.Remove(removed);
+                }
+
+                // 应用搜索过滤
+                FilterServices();
+            });
+        }
+
+        /// <summary>
+        /// 处理协调器批量状态更新（来自 ServicePollingCoordinator）
+        /// </summary>
+        private void OnPollingCoordinatorServicesUpdated(object? sender, ServicesUpdatedEventArgs e)
+        {
+            _logger.LogInformation("Received ServicesUpdated event for {Count} services", e.StatusUpdates.Count);
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                foreach (var (serviceId, status) in e.StatusUpdates)
+                {
+                    var viewModel = _allServices.FirstOrDefault(vm => vm.Service.Id == serviceId);
+                    if (viewModel != null)
+                    {
+                        _logger.LogInformation("Updating service {ServiceId} status to {Status}", serviceId, status);
+                        viewModel.UpdateStatus(status);
+                        viewModel.RefreshCommands();
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Service {ServiceId} not found in _allServices", serviceId);
+                    }
+                }
+            });
         }
 
         /// <summary>
@@ -685,8 +757,9 @@ namespace WinServiceManager.ViewModels
             {
                 // 取消订阅状态监控
                 _statusMonitor?.Unsubscribe(OnServicesUpdated);
+                _pollingCoordinator.ServicesUpdated -= OnPollingCoordinatorServicesUpdated;
 
-                // 取消订阅ViewLogsRequested和EditRequested事件并释放资源
+                // 取消订阅ViewLogsRequested、EditRequested事件并释放资源
                 foreach (var service in Services)
                 {
                     if (service is ServiceItemViewModel serviceViewModel)

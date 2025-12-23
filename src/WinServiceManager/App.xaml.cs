@@ -138,6 +138,7 @@ namespace WinServiceManager
             services.AddSingleton<ServiceManagerService>();
             services.AddSingleton<LogReaderService>();
             services.AddSingleton<ServiceStatusMonitor>();
+            services.AddSingleton<ServicePollingCoordinator>();
             services.AddSingleton<ServiceDependencyValidator>();
             services.AddSingleton<IPerformanceMonitorService, PerformanceMonitorService>();
 

@@ -9,6 +9,7 @@ namespace WinServiceManager.Services
         Task<List<ServiceItem>> LoadServicesAsync();
         Task SaveServicesAsync(List<ServiceItem> services);
         Task<ServiceItem?> GetServiceAsync(string id);
+        Task<ServiceItem?> LoadServiceAsync(string id);
         Task AddServiceAsync(ServiceItem service);
         Task UpdateServiceAsync(ServiceItem service);
         Task DeleteServiceAsync(string id);
