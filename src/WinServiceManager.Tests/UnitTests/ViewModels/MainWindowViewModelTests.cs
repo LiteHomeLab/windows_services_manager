@@ -488,9 +488,9 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
             _viewModel.SortServices(columnName);
 
             // Assert
-            _viewModel.Services[0].CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromDays(0));
-            _viewModel.Services[1].CreatedAt.Should().BeCloseTo(DateTime.UtcNow.AddDays(-1), TimeSpan.FromDays(0));
-            _viewModel.Services[2].CreatedAt.Should().BeCloseTo(DateTime.UtcNow.AddDays(-2), TimeSpan.FromDays(0));
+            _viewModel.Services[0].CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromHours(1));
+            _viewModel.Services[1].CreatedAt.Should().BeCloseTo(DateTime.UtcNow.AddDays(-1), TimeSpan.FromHours(1));
+            _viewModel.Services[2].CreatedAt.Should().BeCloseTo(DateTime.UtcNow.AddDays(-2), TimeSpan.FromHours(1));
         }
 
         [Fact]
@@ -523,8 +523,8 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
                 _mockServiceManager.Object,
                 _mockStatusMonitor.Object,
                 _mockLogReaderService.Object,
-                _mockPathValidator.Object,
-                _mockCommandValidator.Object);
+                Mock.Of<ILogger<MainWindowViewModel>>(),
+                _mockDependencyValidator.Object);
 
             var newServices = CreateTestServices(2);
 
@@ -776,8 +776,8 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
                     StartMode = ServiceStartupMode.Manual,
                     StopTimeout = 30000,
                     Priority = ProcessPriority.High,
-                    Affinity = "0,1",
-                    Metadata = new Dictionary<string, string>
+                    Affinity = 1,
+                    Metadata = new Dictionary<string, object>
                     {
                         ["Version"] = "1.0"
                     }

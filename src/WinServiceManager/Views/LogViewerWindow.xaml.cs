@@ -11,7 +11,7 @@ namespace WinServiceManager.Views
     /// </summary>
     public partial class LogViewerWindow : Window
     {
-        private LogViewerViewModel _viewModel;
+        private LogViewerViewModel? _viewModel;
 
         public LogViewerWindow()
         {
@@ -33,7 +33,7 @@ namespace WinServiceManager.Views
             Loaded += (s, e) => LogScrollViewer?.Focus();
         }
 
-        private void LogViewerWindow_Closing(object sender, CancelEventArgs e)
+        private void LogViewerWindow_Closing(object? sender, CancelEventArgs e)
         {
             // 停止监控
             if (_viewModel != null)
@@ -43,7 +43,7 @@ namespace WinServiceManager.Views
             }
         }
 
-        private void OnScrollToBottomRequested(object sender, EventArgs e)
+        private void OnScrollToBottomRequested(object? sender, EventArgs e)
         {
             // 使用 Dispatcher 确保在 UI 线程执行
             Dispatcher.Invoke(() =>

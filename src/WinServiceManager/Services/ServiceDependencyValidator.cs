@@ -44,7 +44,7 @@ namespace WinServiceManager.Services
                 allServices ??= await _serviceManager.GetAllServicesAsync();
 
                 // 1. 检查依赖服务是否存在
-                await ValidateDependencyExistenceAsync(service, allServices, result);
+                ValidateDependencyExistence(service, allServices, result);
 
                 // 2. 检查循环依赖
                 ValidateCircularDependencies(service, allServices, result);
@@ -71,7 +71,7 @@ namespace WinServiceManager.Services
         /// <summary>
         /// 验证依赖服务是否存在
         /// </summary>
-        private async Task ValidateDependencyExistenceAsync(
+        private void ValidateDependencyExistence(
             ServiceItem service,
             IEnumerable<ServiceItem> allServices,
             DependencyValidationResult result)

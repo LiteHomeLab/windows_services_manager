@@ -28,11 +28,11 @@ public class ServiceItemTests
         service.ServiceAccount.Should().Be("LocalSystem");
         service.Environment.Should().BeNull();
         service.LogPath.Should().BeEmpty();
-        service.LogMode.Should().Be(LogMode.Reset);
-        service.StartMode.Should().Be(ServiceStartMode.Automatic);
+        service.LogMode.Should().Be("roll-by-size");
+        service.StartMode.Should().Be(ServiceStartupMode.Automatic);
         service.StopTimeout.Should().Be(15000);
         service.Priority.Should().Be(ProcessPriority.Normal);
-        service.Affinity.Should().Be("All");
+        service.Affinity.Should().BeNull();
         service.Metadata.Should().BeNull();
         service.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
@@ -282,12 +282,12 @@ public class ServiceItemTests
                 ["PORT"] = "8080"
             },
             LogPath = @"C:\logs\test.log",
-            LogMode = LogMode.Append,
-            StartMode = ServiceStartMode.Manual,
+            LogMode = "append",
+            StartMode = ServiceStartupMode.Manual,
             StopTimeout = 30000,
             Priority = ProcessPriority.High,
-            Affinity = "0,1",
-            Metadata = new Dictionary<string, string>
+            Affinity = 1,
+            Metadata = new Dictionary<string, object>
             {
                 ["Version"] = "1.0",
                 ["Author"] = "Test"

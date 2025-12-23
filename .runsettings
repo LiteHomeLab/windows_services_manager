@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <!-- Configurations for test execution -->
+  <RunConfiguration>
+    <!-- Maximum number of parallel test threads -->
+    <MaxCpuCount>0</MaxCpuCount>
+
+    <!-- Timeout for each test (in milliseconds) -->
+    <!-- 300 seconds (5 minutes) per test -->
+    <TestRunTimeout>300000</TestRunTimeout>
+
+    <!-- Default timeout for individual tests -->
+    <DesignTimeFriendlyTestFramework>true</DesignTimeFriendlyTestFramework>
+
+    <!-- Disable app domain for better performance -->
+    <DisableAppDomain>true</DisableAppDomain>
+
+    <!-- Use 32-bit process if needed (set to false for 64-bit) -->
+    <DisableParallelization>false</DisableParallelization>
+  </RunConfiguration>
+
+  <!-- Data collection settings -->
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <!-- Code coverage collector -->
+      <DataCollector friendlyName="Code Coverage" enabled="false">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Function>[^_]*.*</Function>
+          <!-- Exclude generated code and test code -->
+          <ExcludeByAttribute>Obsolete,GeneratedCode,CompilerGenerated</ExcludeByAttribute>
+          <ExcludeByFile>**/Tests/**</ExcludeByFile>
+          <UseSourceLink>true</UseSourceLink>
+          <DeterministicReport>true</DeterministicReport>
+        </Configuration>
+      </DataCollector>
+
+      <!-- Performance collector -->
+      <DataCollector friendlyName="Performance" enabled="false">
+        <Configuration>
+          <RecordTimeInstrumentation>true</RecordTimeInstrumentation>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+
+  <!-- Logger settings -->
+  <LoggerRunSettings>
+    <Loggers>
+      <!-- Console logger with detailed verbosity -->
+      <Logger friendlyName="console" enabled="True">
+        <Configuration>
+          <Verbosity>normal</Verbosity>
+          <Summary>all</Summary>
+        </Configuration>
+      </Logger>
+
+      <!-- TRX logger for CI/CD -->
+      <Logger friendlyName="trx" enabled="False">
+        <Configuration>
+          <LogFileName>TestResults.trx</LogFileName>
+        </Configuration>
+      </Logger>
+
+      <!-- HTML logger for human-readable reports -->
+      <Logger friendlyName="html" enabled="False">
+        <Configuration>
+          <LogFileName>TestResults.html</LogFileName>
+        </Configuration>
+      </Logger>
+    </Loggers>
+  </LoggerRunSettings>
+
+  <!-- Test run parameters -->
+  <TestRunParameters>
+    <!-- Parameters can be accessed in tests using TestContext -->
+    <Parameter name="TEST_ENVIRONMENT" value="LOCAL" />
+    <Parameter name="TEST_TIMEOUT" value="300" />
+    <Parameter name="CLEANUP_AFTER_TESTS" value="true" />
+  </TestRunParameters>
+
+  <!-- Specific configurations for Microsoft.NET.Test.Sdk -->
+  <Microsoft.VisualStudio.TestTools.CodeCoverage>
+    <!-- Code coverage filters -->
+    <Include>
+      <!-- Include code from WinServiceManager project -->
+      <ModulePath>WinServiceManager\.dll$</ModulePath>
+    </Include>
+    <Exclude>
+      <!-- Exclude test code -->
+      <ModulePath>.*Tests\.dll$</ModulePath>
+      <!-- Exclude third-party libraries -->
+      <ModulePath>.*Moq\.dll$</ModulePath>
+      <ModulePath>.*FluentAssertions\.dll$</ModulePath>
+      <ModulePath>.*xunit\.dll$</ModulePath>
+      <!-- Exclude generated code -->
+      <ModulePath>.*\..*\.g\.cs$</ModulePath>
+      <ModulePath>.*\..*\.g\.i\.cs$</ModulePath>
+    </Exclude>
+    <Functions>
+      <Exclude>
+        <Function>^System\.Object.*::ToString\(\)$</Function>
+        <Function>^System\.Object.*::Equals\(.+\)$</Function>
+        <Function>^System\.Object.*::GetHashCode\(\)$</Function>
+      </Exclude>
+    </Functions>
+  </Microsoft.VisualStudio.TestTools.CodeCoverage>
+</RunSettings>

@@ -26,7 +26,7 @@ namespace WinServiceManager.Services
             // 更新每个服务的实际状态
             foreach (var service in services)
             {
-                service.Status = await GetActualServiceStatusAsync(service);
+                service.Status = GetActualServiceStatus(service);
             }
 
             return services;
@@ -174,7 +174,7 @@ namespace WinServiceManager.Services
             return result;
         }
 
-        public async Task<ServiceStatus> GetActualServiceStatusAsync(ServiceItem service)
+        public ServiceStatus GetActualServiceStatus(ServiceItem service)
         {
             try
             {

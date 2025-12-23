@@ -105,7 +105,7 @@ namespace WinServiceManager.Models
         /// <summary>
         /// 创建失败结果
         /// </summary>
-        public static ServiceOperationResult<T> FailureResult(
+        public new static ServiceOperationResult<T> FailureResult(
             ServiceOperationType operation,
             string errorMessage,
             string? details = null,

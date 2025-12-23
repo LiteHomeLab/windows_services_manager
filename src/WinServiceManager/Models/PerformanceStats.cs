@@ -41,5 +41,10 @@ namespace WinServiceManager.Models
         /// 最后更新时间
         /// </summary>
         public DateTime LastUpdated { get; set; } = DateTime.Now;
+
+        /// <summary>
+        /// 时间戳
+        /// </summary>
+        public DateTime Timestamp { get; set; } = DateTime.Now;
     }
 }

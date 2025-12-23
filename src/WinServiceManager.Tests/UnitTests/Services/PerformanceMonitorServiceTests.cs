@@ -60,7 +60,7 @@ public class PerformanceMonitorServiceTests : IDisposable
     public async Task StartMonitoring_ShouldCollectStatsPeriodically()
     {
         // Arrange
-        _monitorService.StartMonitoring(_updateInterval);
+        _monitorService.StartMonitoring();
 
         // Act
         await Task.Delay(350); // 等待几次更新
@@ -84,7 +84,7 @@ public class PerformanceMonitorServiceTests : IDisposable
     public void StopMonitoring_ShouldStopCollection()
     {
         // Arrange
-        _monitorService.StartMonitoring(_updateInterval);
+        _monitorService.StartMonitoring();
         var statsBefore = _monitorService.GetCurrentStats();
         await Task.Delay(150);
 
@@ -194,7 +194,7 @@ public class PerformanceMonitorServiceTests : IDisposable
     public async Task GetHistoricalStatsAsync_WithLimit_ShouldReturnLimitedStats()
     {
         // Arrange
-        _monitorService.StartMonitoring(_updateInterval);
+        _monitorService.StartMonitoring();
         await Task.Delay(550); // 收集更多统计
 
         // Act
@@ -211,7 +211,7 @@ public class PerformanceMonitorServiceTests : IDisposable
     public async Task GetHistoricalStatsAsync_WhenMonitoring_ShouldReturnRecentStats()
     {
         // Arrange
-        _monitorService.StartMonitoring(_updateInterval);
+        _monitorService.StartMonitoring();
         await Task.Delay(250);
         var startTime = DateTime.UtcNow;
         await Task.Delay(250);
@@ -230,11 +230,11 @@ public class PerformanceMonitorServiceTests : IDisposable
     public async Task StartMonitoring_AlreadyStarted_ShouldNotDuplicateCollection()
     {
         // Arrange
-        _monitorService.StartMonitoring(_updateInterval);
+        _monitorService.StartMonitoring();
         await Task.Delay(200);
 
         // Act - 再次启动
-        _monitorService.StartMonitoring(_updateInterval);
+        _monitorService.StartMonitoring();
         await Task.Delay(200);
 
         var stats = await _monitorService.GetHistoricalStatsAsync();
@@ -252,7 +252,7 @@ public class PerformanceMonitorServiceTests : IDisposable
     public void Dispose_ShouldStopMonitoring()
     {
         // Arrange
-        _monitorService.StartMonitoring(_updateInterval);
+        _monitorService.StartMonitoring();
 
         // Act
         _monitorService.Dispose();
@@ -278,14 +278,14 @@ public class PerformanceMonitorServiceTests : IDisposable
     public async Task GetHistoricalStatsAsync_WithLargeLimit_ShouldReturnAllStats()
     {
         // Arrange
-        _monitorService.StartMonitoring(_updateInterval);
+        _monitorService.StartMonitoring();
         await Task.Delay(350);
 
         // Act
-        var allStats = await _monitorService.GetHistoricalStatsAsync(1000);
+        var allStats = await _monitorService.GetHistoricalStatsAsync(TimeSpan.FromMinutes(1000));
 
         // Assert
-        var limitedStats = await _monitorService.GetHistoricalStatsAsync();
+        var limitedStats = await _monitorService.GetHistoricalStatsAsync(TimeSpan.FromMinutes(10));
         allStats.Should().HaveCountGreaterThanOrEqualTo(limitedStats.Count);
 
         // Cleanup
@@ -295,11 +295,11 @@ public class PerformanceMonitorServiceTests : IDisposable
     [Theory]
     [InlineData(-1)]
     [InlineData(0)]
-    public async Task GetHistoricalStatsAsync_WithInvalidLimit_ShouldThrow(int limit)
+    public async Task GetHistoricalStatsAsync_WithInvalidDuration_ShouldThrow(int minutes)
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-            () => _monitorService.GetHistoricalStatsAsync(limit));
+            () => _monitorService.GetHistoricalStatsAsync(TimeSpan.FromMinutes(minutes)));
     }
 
     public void Dispose()

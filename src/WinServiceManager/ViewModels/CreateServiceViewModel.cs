@@ -599,7 +599,7 @@ namespace WinServiceManager.ViewModels
                     };
                 }
             }
-            catch (Exception ex)
+            catch
             {
                 // 忽略加载错误，不会影响服务创建
                 AvailableServices = new List<ServiceItem>();

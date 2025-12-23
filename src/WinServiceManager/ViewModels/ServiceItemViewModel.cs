@@ -347,7 +347,7 @@ namespace WinServiceManager.ViewModels
         {
             await ExecuteOperationAsync(async () =>
             {
-                var actualStatus = await _serviceManager.GetActualServiceStatusAsync(Service);
+                var actualStatus = _serviceManager.GetActualServiceStatus(Service);
                 Status = actualStatus;
             });
         }
