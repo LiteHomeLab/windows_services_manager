@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
@@ -17,6 +18,7 @@ namespace WinServiceManager.ViewModels
     /// </summary>
     public partial class EditServiceViewModel : BaseViewModel
     {
+        private readonly ILogger<EditServiceViewModel> _logger;
         private readonly ServiceManagerService _serviceManager;
         private readonly ServiceItem _originalService;
         private readonly ServiceDependencyValidator _dependencyValidator;
@@ -44,11 +46,13 @@ namespace WinServiceManager.ViewModels
         public EditServiceViewModel(
             ServiceItem service,
             ServiceManagerService serviceManager,
-            ServiceDependencyValidator dependencyValidator)
+            ServiceDependencyValidator dependencyValidator,
+            ILogger<EditServiceViewModel> logger)
         {
             _originalService = service ?? throw new ArgumentNullException(nameof(service));
             _serviceManager = serviceManager ?? throw new ArgumentNullException(nameof(serviceManager));
             _dependencyValidator = dependencyValidator ?? throw new ArgumentNullException(nameof(dependencyValidator));
+            _logger = logger;
             _originalId = service.Id;
 
             // 初始化属性从现有服务
@@ -63,6 +67,8 @@ namespace WinServiceManager.ViewModels
             _serviceAccount = service.ServiceAccount;
             _startMode = service.StartMode.ToString();
             _stopTimeout = service.StopTimeout;
+
+            _logger.LogInformation("编辑服务对话框已打开: ServiceId={ServiceId}, DisplayName={DisplayName}", _originalId, _displayName);
 
             // 异步加载可用服务列表
             _ = LoadAvailableServicesAsync();
@@ -294,7 +300,15 @@ namespace WinServiceManager.ViewModels
         /// <summary>
         /// 是否可以保存服务（仅检查忙碌状态，验证在点击时进行）
         /// </summary>
-        public bool CanSave => !IsBusy;
+        public bool CanSave
+        {
+            get
+            {
+                var canSave = !IsBusy;
+                _logger.LogDebug("CanSave 被调用: ServiceId={ServiceId}, IsBusy={IsBusy}, CanSave={CanSave}", _originalId, IsBusy, canSave);
+                return canSave;
+            }
+        }
 
         #endregion
 
@@ -396,15 +410,33 @@ namespace WinServiceManager.ViewModels
         [RelayCommand(CanExecute = nameof(CanSave))]
         private async Task SaveAsync()
         {
-            if (!IsValid())
+            _logger.LogInformation("开始保存服务编辑: ServiceId={ServiceId}, DisplayName={DisplayName}", _originalId, DisplayName);
+
+            bool isValid;
+            try
             {
+                isValid = IsValid();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "IsValid 方法抛出异常: ServiceId={ServiceId}", _originalId);
+                ErrorMessage = $"验证时发生异常: {ex.Message}";
+                return;
+            }
+
+            if (!isValid)
+            {
+                _logger.LogWarning("服务编辑验证失败: ServiceId={ServiceId}, Error={Error}", _originalId, ErrorMessage);
                 ErrorMessage = "请检查输入，确保所有必填字段都已正确填写";
                 return;
             }
 
+            _logger.LogInformation("服务编辑验证通过: ServiceId={ServiceId}", _originalId);
+
             // 验证依赖关系
             if (!await ValidateDependenciesAsync())
             {
+                _logger.LogWarning("服务依赖验证失败: ServiceId={ServiceId}", _originalId);
                 return;
             }
 
@@ -429,8 +461,11 @@ namespace WinServiceManager.ViewModels
                     StopTimeout = StopTimeout
                 };
 
-                // 清理和验证参数
-                updateRequest.Arguments = CommandValidator.SanitizeInput(updateRequest.Arguments);
+                _logger.LogInformation("构建更新请求: ServiceId={ServiceId}, DisplayName={DisplayName}, ExecutablePath={ExecutablePath}, Arguments={Arguments}, WorkingDirectory={WorkingDirectory}",
+                    _originalId, DisplayName, ExecutablePath, Arguments, WorkingDirectory);
+
+                // 注意：不在保存时对启动参数进行 SanitizeInput，因为它会把包含双引号的合法参数清空
+                // 参数已经在 IsValid() 方法中验证过了，只需要检查明显的命令注入模式
 
                 // 虽然ScriptPath是文件路径，但我们仍然需要清理路径
                 if (!string.IsNullOrEmpty(updateRequest.ScriptPath))
@@ -440,12 +475,19 @@ namespace WinServiceManager.ViewModels
 
                 BusyMessage = "正在更新服务配置...";
 
+                _logger.LogInformation("正在调用 ServiceManager.UpdateServiceAsync: ServiceId={ServiceId}", _originalId);
+
                 var result = await _serviceManager.UpdateServiceAsync(updateRequest);
+
+                _logger.LogInformation("ServiceManager.UpdateServiceAsync 返回: ServiceId={ServiceId}, Success={Success}, ErrorMessage={ErrorMessage}",
+                    _originalId, result.Success, result.ErrorMessage ?? "(null)");
 
                 if (result.Success)
                 {
                     BusyMessage = string.Empty;
                     IsBusy = false;
+
+                    _logger.LogInformation("服务配置更新成功: ServiceId={ServiceId}, DisplayName={DisplayName}", _originalId, DisplayName);
 
                     MessageBox.Show(
                         $"服务 '{DisplayName}' 配置更新成功！\n\n注意：如果服务正在运行，需要重启服务才能应用新配置。",
@@ -458,17 +500,20 @@ namespace WinServiceManager.ViewModels
                 }
                 else
                 {
+                    _logger.LogError("服务配置更新失败: ServiceId={ServiceId}, ErrorMessage={ErrorMessage}", _originalId, result.ErrorMessage);
                     ErrorMessage = $"更新服务配置失败: {result.ErrorMessage}";
                 }
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "保存服务编辑时发生异常: ServiceId={ServiceId}", _originalId);
                 ErrorMessage = $"更新服务配置时发生错误: {ex.Message}";
             }
             finally
             {
                 IsBusy = false;
                 BusyMessage = string.Empty;
+                _logger.LogInformation("保存服务编辑结束: ServiceId={ServiceId}", _originalId);
             }
         }
 
@@ -721,9 +766,11 @@ namespace WinServiceManager.ViewModels
         /// </summary>
         private bool IsValid()
         {
+            _logger.LogInformation("开始验证服务输入: ServiceId={ServiceId}", _originalId);
             var errors = new List<string>();
 
             // 验证服务名称
+            _logger.LogInformation("验证服务名称: DisplayName='{DisplayName}', Length={Length}", DisplayName, DisplayName?.Length ?? 0);
             if (string.IsNullOrWhiteSpace(DisplayName))
             {
                 errors.Add("服务名称不能为空");
@@ -734,23 +781,37 @@ namespace WinServiceManager.ViewModels
             }
 
             // 验证可执行文件
+            var exeExists = !string.IsNullOrWhiteSpace(ExecutablePath) && File.Exists(ExecutablePath);
+            _logger.LogInformation("验证可执行文件: ExecutablePath='{ExecutablePath}', OriginalPath='{OriginalPath}', PathChanged={PathChanged}, Exists={Exists}",
+                ExecutablePath, _originalService.ExecutablePath, ExecutablePath != _originalService.ExecutablePath, exeExists);
             if (string.IsNullOrWhiteSpace(ExecutablePath))
             {
                 errors.Add("请选择可执行文件");
             }
-            else if (!File.Exists(ExecutablePath))
+            // 编辑模式：只在路径被修改时才检查文件是否存在
+            else if (ExecutablePath != _originalService.ExecutablePath && !File.Exists(ExecutablePath))
             {
                 errors.Add("指定的可执行文件不存在");
             }
-            else if (!PathValidator.IsValidPath(ExecutablePath))
+            else
             {
-                errors.Add("可执行文件路径包含非法字符");
+                _logger.LogInformation("开始调用 PathValidator.IsValidPath 检查可执行文件");
+                var pathValid = PathValidator.IsValidPath(ExecutablePath);
+                _logger.LogInformation("PathValidator.IsValidPath(可执行文件) 返回: {IsValid}", pathValid);
+                if (!pathValid)
+                {
+                    errors.Add("可执行文件路径包含非法字符");
+                }
             }
 
             // 验证脚本文件（如果已填写）
+            _logger.LogInformation("验证脚本文件: ScriptPath='{ScriptPath}', OriginalPath='{OriginalPath}'",
+                ScriptPath ?? "(null)", _originalService.ScriptPath ?? "(null)");
             if (!string.IsNullOrWhiteSpace(ScriptPath))
             {
-                if (!File.Exists(ScriptPath))
+                // 编辑模式：只在路径被修改时才检查文件是否存在
+                var scriptChanged = ScriptPath != _originalService.ScriptPath;
+                if (scriptChanged && !File.Exists(ScriptPath))
                 {
                     errors.Add("指定的脚本文件不存在");
                 }
@@ -761,31 +822,62 @@ namespace WinServiceManager.ViewModels
             }
 
             // 验证工作目录
+            var dirExists = !string.IsNullOrWhiteSpace(WorkingDirectory) && Directory.Exists(WorkingDirectory);
+            _logger.LogInformation("验证工作目录: WorkingDirectory='{WorkingDirectory}', OriginalDir='{OriginalDir}', PathChanged={PathChanged}, Exists={Exists}",
+                WorkingDirectory, _originalService.WorkingDirectory, WorkingDirectory != _originalService.WorkingDirectory, dirExists);
             if (string.IsNullOrWhiteSpace(WorkingDirectory))
             {
                 errors.Add("请选择工作目录");
             }
-            else if (!Directory.Exists(WorkingDirectory))
+            // 编辑模式：只在路径被修改时才检查目录是否存在
+            else if (WorkingDirectory != _originalService.WorkingDirectory && !Directory.Exists(WorkingDirectory))
             {
                 errors.Add("指定的工作目录不存在");
             }
-            else if (!PathValidator.IsValidPath(WorkingDirectory))
+            else
             {
-                errors.Add("工作目录路径包含非法字符");
+                _logger.LogInformation("开始调用 PathValidator.IsValidPath 检查工作目录");
+                var pathValid = PathValidator.IsValidPath(WorkingDirectory);
+                _logger.LogInformation("PathValidator.IsValidPath 返回: {IsValid}", pathValid);
+                if (!pathValid)
+                {
+                    errors.Add("工作目录路径包含非法字符");
+                }
             }
 
             // 验证启动参数（仅当非空时验证）
-            if (!string.IsNullOrWhiteSpace(Arguments) && !CommandValidator.IsValidInput(Arguments))
+            _logger.LogInformation("验证启动参数: Arguments='{Arguments}'", Arguments);
+            // 注意：启动参数不需要严格验证，因为用户是在配置自己的服务
+            // 只检查是否包含明显的命令注入模式（管道、命令连接符等）
+            if (!string.IsNullOrWhiteSpace(Arguments))
             {
-                errors.Add("启动参数包含非法字符");
+                // 检查明显的命令注入模式，但不检查引号（引号在参数中是合法的）
+                var dangerousPatterns = new[] { "&&", "||", "| ", " |", ";", "`", "$(" };
+                bool hasInjection = false;
+                foreach (var pattern in dangerousPatterns)
+                {
+                    if (Arguments.Contains(pattern))
+                    {
+                        errors.Add($"启动参数包含不允许的命令模式: {pattern}");
+                        hasInjection = true;
+                        break;
+                    }
+                }
+                if (!hasInjection)
+                {
+                    _logger.LogInformation("启动参数基本验证通过");
+                }
             }
 
             if (errors.Any())
             {
-                ErrorMessage = string.Join("\n", errors);
+                var errorText = string.Join("\n", errors);
+                _logger.LogWarning("验证失败，错误列表: {Errors}", errorText);
+                ErrorMessage = errorText;
                 return false;
             }
 
+            _logger.LogInformation("验证通过: ServiceId={ServiceId}", _originalId);
             ErrorMessage = string.Empty;
             return true;
         }

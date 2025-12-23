@@ -175,7 +175,9 @@ namespace WinServiceManager.ViewModels
                 StatusMessage = $"准备编辑 {serviceViewModel.DisplayName}...";
 
                 // 创建 ViewModel
-                var editViewModel = new EditServiceViewModel(serviceViewModel.Service, _serviceManager, _dependencyValidator);
+                var editLogger = App.Services?.GetRequiredService<ILogger<EditServiceViewModel>>()
+                    ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<EditServiceViewModel>.Instance;
+                var editViewModel = new EditServiceViewModel(serviceViewModel.Service, _serviceManager, _dependencyValidator, editLogger);
 
                 // 创建并显示对话框
                 var dialog = new EditServiceDialog(editViewModel)
@@ -660,7 +662,9 @@ namespace WinServiceManager.ViewModels
                 }
 
                 // 创建 ViewModel
-                var editViewModel = new EditServiceViewModel(service, _serviceManager, _dependencyValidator);
+                var editLogger = App.Services?.GetRequiredService<ILogger<EditServiceViewModel>>()
+                    ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<EditServiceViewModel>.Instance;
+                var editViewModel = new EditServiceViewModel(service, _serviceManager, _dependencyValidator, editLogger);
 
                 // 创建并显示对话框
                 var dialog = new EditServiceDialog(editViewModel)
