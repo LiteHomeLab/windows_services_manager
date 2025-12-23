@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using WinServiceManager.Models;
 using WinServiceManager.Services;
@@ -376,6 +377,30 @@ namespace WinServiceManager.ViewModels
             {
                 await Task.Delay(2000);
                 StatusMessage = "就绪";
+            }
+        }
+
+        [RelayCommand]
+        private void OpenSettings()
+        {
+            try
+            {
+                // 获取设置窗口
+                var settingsWindow = App.Services?.GetService<Views.SettingsWindow>();
+                if (settingsWindow != null)
+                {
+                    settingsWindow.Owner = Application.Current.MainWindow;
+                    settingsWindow.ShowDialog();
+                }
+                else
+                {
+                    MessageBox.Show("无法打开设置窗口", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to open settings window");
+                MessageBox.Show($"无法打开设置窗口: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

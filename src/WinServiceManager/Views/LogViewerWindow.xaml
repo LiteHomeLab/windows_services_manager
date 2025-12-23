@@ -103,10 +103,6 @@
 
                     <!-- 选项 -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal">
-                        <CheckBox Content="自动刷新"
-                                  IsChecked="{Binding IsAutoRefreshEnabled}"
-                                  IsEnabled="{Binding IsMonitoring, Converter={StaticResource InverseBooleanConverter}}"
-                                  Margin="0,0,15,0"/>
                         <CheckBox Content="自动滚动"
                                   IsChecked="{Binding AutoScroll}"/>
                     </StackPanel>
@@ -114,7 +110,8 @@
                     <!-- 操作按钮 -->
                     <StackPanel Grid.Column="4" Orientation="Horizontal">
                         <ToggleButton Content="监控"
-                                      IsChecked="{Binding IsMonitoring}"
+                                      IsChecked="{Binding IsMonitoring, Mode=OneWay}"
+                                      Command="{Binding ToggleMonitoringCommand}"
                                       Width="60"
                                       Margin="0,0,8,0"
                                       Background="#FF9800"
@@ -295,8 +292,7 @@
                         <Slider Value="{Binding RefreshInterval}"
                                 Minimum="1"
                                 Maximum="60"
-                                Width="100"
-                                IsEnabled="{Binding IsAutoRefreshEnabled}"/>
+                                Width="100"/>
                         <TextBlock Text="{Binding RefreshInterval}"
                                    MinWidth="30"
                                    TextAlignment="Center"

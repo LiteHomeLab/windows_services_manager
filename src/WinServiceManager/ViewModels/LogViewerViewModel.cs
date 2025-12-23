@@ -406,6 +406,19 @@ namespace WinServiceManager.ViewModels
             MaxLines = Math.Max(100, MaxLines - 500);
         }
 
+        [RelayCommand]
+        private void ToggleMonitoring()
+        {
+            if (IsMonitoring)
+            {
+                StopMonitoring();
+            }
+            else
+            {
+                StartMonitoring();
+            }
+        }
+
         #endregion
 
         #region Events

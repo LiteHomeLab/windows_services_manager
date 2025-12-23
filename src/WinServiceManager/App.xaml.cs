@@ -1,11 +1,14 @@
 using System.Windows;
 using System.IO;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using WinServiceManager.Services;
 using WinServiceManager.ViewModels;
 using WinServiceManager.Views;
 using Microsoft.Extensions.Logging.Log4Net.AspNetCore;
+using log4net;
+using log4net.Repository;
 
 namespace WinServiceManager
 {
@@ -14,7 +17,50 @@ namespace WinServiceManager
     /// </summary>
     public partial class App : System.Windows.Application
     {
+        private static App? _current;
         private ServiceProvider? _serviceProvider;
+
+        /// <summary>
+        /// 获取服务提供程序（用于访问 DI 容器）
+        /// </summary>
+        public static IServiceProvider? Services => _current?._serviceProvider;
+
+        public App()
+        {
+            _current = this;
+        }
+
+        /// <summary>
+        /// 设置日志级别
+        /// </summary>
+        /// <param name="level">日志级别 (Debug, Information, Warning, Error, Critical)</param>
+        public static void SetLogLevel(string level)
+        {
+            var entryAssembly = Assembly.GetEntryAssembly();
+            if (entryAssembly == null) return;
+
+            var logRepository = LogManager.GetRepository(entryAssembly);
+            var log4netLevel = logRepository.LevelMap[level.ToUpper()];
+            var rootLogger = logRepository.GetLogger("root");
+            ((log4net.Repository.Hierarchy.Logger)rootLogger).Level = log4netLevel;
+            ((log4net.Repository.Hierarchy.Hierarchy)logRepository).RaiseConfigurationChanged(EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// 启用 Debug 级别日志
+        /// </summary>
+        public static void EnableDebugLogging()
+        {
+            SetLogLevel("DEBUG");
+        }
+
+        /// <summary>
+        /// 禁用 Debug 级别日志，恢复默认 INFO 级别
+        /// </summary>
+        public static void DisableDebugLogging()
+        {
+            SetLogLevel("INFO");
+        }
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -73,7 +119,7 @@ namespace WinServiceManager
             {
                 configure.AddLog4Net();
                 configure.AddConsole();
-                configure.SetMinimumLevel(LogLevel.Debug);
+                configure.SetMinimumLevel(LogLevel.Information);
                 configure.AddFilter("Microsoft", LogLevel.Warning);
             });
 
@@ -100,9 +146,11 @@ namespace WinServiceManager
             services.AddTransient<CreateServiceViewModel>();
             services.AddTransient<ServiceItemViewModel>();
             services.AddTransient<LogViewerViewModel>();
+            services.AddTransient<ViewModels.SettingsViewModel>();
 
             // 注册Views
             services.AddTransient<MainWindow>();
+            services.AddTransient<Views.SettingsWindow>();
         }
 
         protected override void OnExit(ExitEventArgs e)
