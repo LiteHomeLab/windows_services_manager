@@ -256,22 +256,33 @@ namespace WinServiceManager.Models
         /// 根据后缀类型查找日志文件
         /// </summary>
         /// <param name="logType">日志类型: "out", "err", "wrapper"</param>
-        /// <returns>匹配的日志文件路径，如果不存在则返回空字符串</returns>
-        public string FindLogPath(string logType)
+        /// <returns>匹配的日志文件路径，如果不存在则返回 null</returns>
+        public string? FindLogPath(string logType)
         {
             try
             {
                 if (!Directory.Exists(LogDirectory))
-                    return string.Empty;
+                    return null;
 
                 var pattern = $"*.{logType}.log";
                 var files = Directory.GetFiles(LogDirectory, pattern);
 
-                return files.FirstOrDefault() ?? string.Empty;
+                return files.FirstOrDefault();
             }
-            catch
+            catch (UnauthorizedAccessException)
             {
-                return string.Empty;
+                // 权限不足，无法访问目录
+                return null;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                // 目录不存在
+                return null;
+            }
+            catch (IOException)
+            {
+                // IO 错误
+                return null;
             }
         }
 
@@ -288,24 +299,31 @@ namespace WinServiceManager.Models
                 if (!Directory.Exists(LogDirectory))
                     return result;
 
-                // 查找 *.out.log
-                var outLog = FindLogPath("out");
-                if (!string.IsNullOrEmpty(outLog))
-                    result["Output"] = outLog;
+                // 一次性获取所有日志文件，避免多次IO操作
+                var allFiles = Directory.GetFiles(LogDirectory, "*.log");
 
-                // 查找 *.err.log
-                var errLog = FindLogPath("err");
-                if (!string.IsNullOrEmpty(errLog))
-                    result["Error"] = errLog;
-
-                // 查找 *.wrapper.log
-                var wrapperLog = FindLogPath("wrapper");
-                if (!string.IsNullOrEmpty(wrapperLog))
-                    result["Wrapper"] = wrapperLog;
+                foreach (var file in allFiles)
+                {
+                    var fileName = Path.GetFileNameWithoutExtension(file);
+                    if (fileName.EndsWith(".out", StringComparison.OrdinalIgnoreCase))
+                        result["Output"] = file;
+                    else if (fileName.EndsWith(".err", StringComparison.OrdinalIgnoreCase))
+                        result["Error"] = file;
+                    else if (fileName.EndsWith(".wrapper", StringComparison.OrdinalIgnoreCase))
+                        result["Wrapper"] = file;
+                }
             }
-            catch
+            catch (UnauthorizedAccessException)
             {
-                // 忽略异常，返回空字典
+                // 权限不足
+            }
+            catch (DirectoryNotFoundException)
+            {
+                // 目录不存在
+            }
+            catch (IOException)
+            {
+                // IO 错误
             }
 
             return result;
