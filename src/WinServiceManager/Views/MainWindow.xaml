@@ -72,13 +72,6 @@
                     <TextBlock Text="刷新"/>
                 </StackPanel>
             </Button>
-            <Button Command="{Binding ViewLogsCommand}"
-                    CommandParameter="{Binding SelectedService}">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="📄" Margin="0,0,5,0"/>
-                    <TextBlock Text="查看日志"/>
-                </StackPanel>
-            </Button>
             <Button Command="{Binding OpenSelectedServiceDirectoryCommand}">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="📁" Margin="0,0,5,0"/>

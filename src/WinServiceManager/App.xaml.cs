@@ -136,7 +136,6 @@ namespace WinServiceManager
             services.AddSingleton<IDataStorageService, JsonDataStorageService>();
             services.AddSingleton<WinSWWrapper>();
             services.AddSingleton<ServiceManagerService>();
-            services.AddSingleton<LogReaderService>();
             services.AddSingleton<ServiceStatusMonitor>();
             services.AddSingleton<ServicePollingCoordinator>();
             services.AddSingleton<ServiceDependencyValidator>();
@@ -146,7 +145,6 @@ namespace WinServiceManager
             services.AddTransient<MainWindowViewModel>();
             services.AddTransient<CreateServiceViewModel>();
             services.AddTransient<ServiceItemViewModel>();
-            services.AddTransient<LogViewerViewModel>();
             services.AddTransient<ViewModels.SettingsViewModel>();
 
             // 注册Views

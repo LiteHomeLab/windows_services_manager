@@ -49,7 +49,6 @@ namespace WinServiceManager.ViewModels
         private readonly ServiceManagerService _serviceManager;
         private readonly ServiceStatusMonitor _statusMonitor;
         private readonly ServicePollingCoordinator _pollingCoordinator;
-        private readonly LogReaderService _logReaderService;
         private readonly ILogger<MainWindowViewModel> _logger;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ServiceDependencyValidator _dependencyValidator;
@@ -142,7 +141,6 @@ namespace WinServiceManager.ViewModels
             ServiceManagerService serviceManager,
             ServiceStatusMonitor statusMonitor,
             ServicePollingCoordinator pollingCoordinator,
-            LogReaderService logReaderService,
             ILogger<MainWindowViewModel> logger,
             ILoggerFactory loggerFactory,
             ServiceDependencyValidator dependencyValidator)
@@ -150,7 +148,6 @@ namespace WinServiceManager.ViewModels
             _serviceManager = serviceManager ?? throw new ArgumentNullException(nameof(serviceManager));
             _statusMonitor = statusMonitor ?? throw new ArgumentNullException(nameof(statusMonitor));
             _pollingCoordinator = pollingCoordinator ?? throw new ArgumentNullException(nameof(pollingCoordinator));
-            _logReaderService = logReaderService ?? throw new ArgumentNullException(nameof(logReaderService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             _dependencyValidator = dependencyValidator ?? throw new ArgumentNullException(nameof(dependencyValidator));
@@ -492,47 +489,6 @@ namespace WinServiceManager.ViewModels
         }
 
         [RelayCommand]
-        private async Task ViewLogsAsync()
-        {
-            if (SelectedService == null)
-            {
-                MessageBox.Show("请先选择一个服务", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            try
-            {
-                StatusMessage = $"准备查看 {SelectedService.DisplayName} 的日志...";
-
-                // 创建 ViewModel
-                var logViewModel = new LogViewerViewModel(
-                    _logReaderService,
-                    SelectedService.Service,
-                    _loggerFactory.CreateLogger<LogViewerViewModel>());
-
-                // 创建并显示窗口
-                var logWindow = new LogViewerWindow(SelectedService.Service, logViewModel)
-                {
-                    Owner = Application.Current.MainWindow
-                };
-
-                logWindow.Show();
-
-                StatusMessage = "日志查看器已打开";
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"打开日志查看器失败: {ex.Message}";
-                MessageBox.Show($"无法打开日志查看器: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            finally
-            {
-                await Task.Delay(2000);
-                StatusMessage = "就绪";
-            }
-        }
-
-        [RelayCommand]
         private void OpenSettings()
         {
             try
@@ -614,11 +570,10 @@ namespace WinServiceManager.ViewModels
         {
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                // 创建新的 ViewModel 列表并订阅ViewLogsRequested事件
+                // 创建新的 ViewModel 列表
                 var newServices = services.Select(s =>
                 {
                     var viewModel = new ServiceItemViewModel(s, _serviceManager, _pollingCoordinator);
-                    viewModel.ViewLogsRequested += OnServiceViewLogsRequested;
                     viewModel.EditRequested += OnServiceEditRequested;
                     return viewModel;
                 }).ToList();
@@ -666,7 +621,6 @@ namespace WinServiceManager.ViewModels
                     {
                         // 新服务，创建新的 ViewModel
                         var newViewModel = new ServiceItemViewModel(updatedService, _serviceManager, _pollingCoordinator);
-                        newViewModel.ViewLogsRequested += OnServiceViewLogsRequested;
                         newViewModel.EditRequested += OnServiceEditRequested;
                         _allServices.Add(newViewModel);
                     }
@@ -710,43 +664,6 @@ namespace WinServiceManager.ViewModels
                     }
                 }
             });
-        }
-
-        /// <summary>
-        /// 处理服务查看日志请求
-        /// </summary>
-        private async void OnServiceViewLogsRequested(object? sender, ServiceItem service)
-        {
-            try
-            {
-                StatusMessage = $"准备查看 {service.DisplayName} 的日志...";
-
-                // 创建 ViewModel
-                var logViewModel = new LogViewerViewModel(
-                    _logReaderService,
-                    service,
-                    _loggerFactory.CreateLogger<LogViewerViewModel>());
-
-                // 创建并显示窗口
-                var logWindow = new LogViewerWindow(service, logViewModel)
-                {
-                    Owner = Application.Current.MainWindow
-                };
-
-                logWindow.Show();
-
-                StatusMessage = "日志查看器已打开";
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"打开日志查看器失败: {ex.Message}";
-                MessageBox.Show($"无法打开日志查看器: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            finally
-            {
-                await Task.Delay(2000);
-                StatusMessage = "就绪";
-            }
         }
 
         /// <summary>
@@ -892,12 +809,11 @@ namespace WinServiceManager.ViewModels
                 _statusMonitor?.Unsubscribe(OnServicesUpdated);
                 _pollingCoordinator.ServicesUpdated -= OnPollingCoordinatorServicesUpdated;
 
-                // 取消订阅ViewLogsRequested、EditRequested事件并释放资源
+                // 取消订阅EditRequested事件并释放资源
                 foreach (var service in Services)
                 {
                     if (service is ServiceItemViewModel serviceViewModel)
                     {
-                        serviceViewModel.ViewLogsRequested -= OnServiceViewLogsRequested;
                         serviceViewModel.EditRequested -= OnServiceEditRequested;
                     }
 
@@ -911,7 +827,6 @@ namespace WinServiceManager.ViewModels
                 {
                     if (service is ServiceItemViewModel serviceViewModel)
                     {
-                        serviceViewModel.ViewLogsRequested -= OnServiceViewLogsRequested;
                         serviceViewModel.EditRequested -= OnServiceEditRequested;
                     }
 

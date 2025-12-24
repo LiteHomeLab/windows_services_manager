@@ -54,11 +54,6 @@ namespace WinServiceManager.ViewModels
             _cachedStatus = service.Status;  // 初始化缓存状态
         }
 
-        /// <summary>
-        /// 请求查看日志事件
-        /// </summary>
-        public event EventHandler<ServiceItem>? ViewLogsRequested;
-
         #region Properties
 
         /// <summary>
@@ -432,13 +427,6 @@ namespace WinServiceManager.ViewModels
             {
                 IsBusy = false;
             }
-        }
-
-        [RelayCommand]
-        private void ViewLogs()
-        {
-            // 触发查看日志请求事件，由主窗口处理
-            ViewLogsRequested?.Invoke(this, Service);
         }
 
         [RelayCommand]

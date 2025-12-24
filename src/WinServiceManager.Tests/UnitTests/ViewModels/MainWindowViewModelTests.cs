@@ -23,7 +23,6 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
     {
         private readonly Mock<ServiceManagerService> _mockServiceManager;
         private readonly Mock<ServiceStatusMonitor> _mockStatusMonitor;
-        private readonly Mock<LogReaderService> _mockLogReaderService;
         private readonly Mock<ILogger<MainWindowViewModel>> _mockLogger;
         private readonly Mock<ServiceDependencyValidator> _mockDependencyValidator;
         private readonly MainWindowViewModel _viewModel;
@@ -33,7 +32,6 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
         {
             _mockServiceManager = new Mock<ServiceManagerService>(Mock.Of<WinSWWrapper>(), Mock.Of<IDataStorageService>());
             _mockStatusMonitor = new Mock<ServiceStatusMonitor>();
-            _mockLogReaderService = new Mock<LogReaderService>();
             _mockLogger = new Mock<ILogger<MainWindowViewModel>>();
             _mockDependencyValidator = new Mock<ServiceDependencyValidator>();
 
@@ -49,7 +47,6 @@ namespace WinServiceManager.Tests.UnitTests.ViewModels
             _viewModel = new MainWindowViewModel(
                 _mockServiceManager.Object,
                 _mockStatusMonitor.Object,
-                _mockLogReaderService.Object,
                 _mockLogger.Object,
                 _mockDependencyValidator.Object);
         }
