@@ -87,7 +87,13 @@ namespace WinServiceManager.ViewModels
         /// <summary>
         /// 当前日志文件路径
         /// </summary>
-        private string CurrentLogPath => _service.FindLogPath(SelectedLogType.ToLower()) ?? string.Empty;
+        private string CurrentLogPath => _service.FindLogPath(SelectedLogType.ToLower() switch
+        {
+            "output" => "out",
+            "error" => "err",
+            "wrapper" => "wrapper",
+            _ => SelectedLogType.ToLower()
+        }) ?? string.Empty;
 
         /// <summary>
         /// 输出日志路径
