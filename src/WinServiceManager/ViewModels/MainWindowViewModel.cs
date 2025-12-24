@@ -556,6 +556,53 @@ namespace WinServiceManager.ViewModels
             }
         }
 
+        [RelayCommand]
+        private void OpenSelectedServiceDirectory()
+        {
+            if (SelectedService == null)
+            {
+                MessageBox.Show("请先选择一个服务", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                var serviceDirectory = Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory,
+                    "services",
+                    SelectedService.Service.Id);
+
+                if (Directory.Exists(serviceDirectory))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = serviceDirectory,
+                        UseShellExecute = true
+                    });
+
+                    StatusMessage = $"已打开 {SelectedService.DisplayName} 的目录";
+                    _ = Task.Delay(2000).ContinueWith(_ => StatusMessage = "就绪");
+                }
+                else
+                {
+                    MessageBox.Show(
+                        $"服务目录不存在:\n{serviceDirectory}",
+                        "目录不存在",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to open service directory for {ServiceName}", SelectedService.DisplayName);
+                MessageBox.Show(
+                    $"无法打开服务目录: {ex.Message}",
+                    "错误",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
         #endregion
 
         #region Private Methods

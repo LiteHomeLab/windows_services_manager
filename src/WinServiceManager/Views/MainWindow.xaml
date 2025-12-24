@@ -79,6 +79,12 @@
                     <TextBlock Text="查看日志"/>
                 </StackPanel>
             </Button>
+            <Button Command="{Binding OpenSelectedServiceDirectoryCommand}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="📁" Margin="0,0,5,0"/>
+                    <TextBlock Text="打开目录"/>
+                </StackPanel>
+            </Button>
             <Separator/>
             <Button Command="{Binding OpenSettingsCommand}">
                 <StackPanel Orientation="Horizontal">
