@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using WinServiceManager.Models;
 using WinServiceManager.ViewModels;
 
@@ -12,6 +13,7 @@ namespace WinServiceManager.Views
     public partial class LogViewerWindow : Window
     {
         private LogViewerViewModel? _viewModel;
+        private bool _userIsScrolling = false;
 
         public LogViewerWindow()
         {
@@ -35,10 +37,10 @@ namespace WinServiceManager.Views
 
         private void LogViewerWindow_Closing(object? sender, CancelEventArgs e)
         {
-            // 停止监控
+            // 停止监控并清理资源
             if (_viewModel != null)
             {
-                _viewModel.StopMonitoring();
+                _viewModel.Dispose();
                 _viewModel.ScrollToBottomRequested -= OnScrollToBottomRequested;
             }
         }
@@ -48,20 +50,23 @@ namespace WinServiceManager.Views
             // 使用 Dispatcher 确保在 UI 线程执行
             Dispatcher.Invoke(() =>
             {
-                LogScrollViewer?.ScrollToEnd();
+                if (!_userIsScrolling)
+                {
+                    LogScrollViewer?.ScrollToEnd();
+                }
             });
         }
 
-        private void LogScrollViewer_ScrollChanged(object sender, System.Windows.Controls.ScrollChangedEventArgs e)
+        private void LogScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
-            // 如果用户手动滚动，可能需要暂停自动滚动
-            if (_viewModel != null && e.ExtentHeightChange == 0)
+            // 检测用户是否正在手动滚动
+            if (e.ExtentHeightChange == 0)
             {
-                // 检查是否滚动到底部
-                bool isAtBottom = Math.Abs(e.VerticalOffset - (e.ExtentHeight - e.ViewportHeight)) < 10;
+                // 计算是否在底部
+                var isAtBottom = e.VerticalOffset + e.ViewportHeight >= e.ExtentHeight - 10;
 
-                // 如果不是自动滚动且不在底部，可以在这里添加逻辑
-                // 例如：_viewModel.IsAutoScroll = isAtBottom;
+                // 如果用户向上滚动（不在底部），标记用户正在滚动
+                _userIsScrolling = !isAtBottom;
             }
         }
     }

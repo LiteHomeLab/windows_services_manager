@@ -15,33 +15,21 @@ using WinServiceManager.Services;
 namespace WinServiceManager.ViewModels
 {
     /// <summary>
-    /// 日志查看器视图模型
+    /// 日志查看器视图模型 - 简化版本
     /// </summary>
     public partial class LogViewerViewModel : BaseViewModel, IDisposable
     {
         private readonly LogReaderService _logReaderService;
         private readonly ServiceItem _service;
         private readonly ILogger<LogViewerViewModel> _logger;
-        private readonly System.Threading.Timer _refreshTimer;
-        private readonly CancellationTokenSource _cancellationTokenSource;
-        private Task? _monitorTask;
 
         private string _selectedLogType = "Output";
         private ObservableCollection<string> _logLines = new();
-        private ObservableCollection<string> _filteredLogLines = new();
-
-        /// <summary>
-        /// 可用的日志类型列表
-        /// </summary>
-        public ObservableCollection<string> AvailableLogTypes { get; } = new();
         private bool _isMonitoring = true;
         private bool _autoScroll = true;
         private bool _isLoading;
-        private bool _showFilterBar;
         private string _filterText = string.Empty;
-        private bool _isFilterApplied;
         private int _maxLines = 1000;
-        private int _refreshInterval = 5;
         private string _status = "就绪";
         private DateTime _lastUpdated = DateTime.Now;
 
@@ -50,26 +38,15 @@ namespace WinServiceManager.ViewModels
             _logReaderService = logReaderService ?? throw new ArgumentNullException(nameof(logReaderService));
             _service = service ?? throw new ArgumentNullException(nameof(service));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _cancellationTokenSource = new CancellationTokenSource();
 
-            // 初始化定时器
-            _refreshTimer = new Timer(OnRefreshTimer, null, Timeout.Infinite, Timeout.Infinite);
-
-            // 根据可用的日志类型动态订阅
-            var availableLogs = _service.GetAvailableLogs();
-            foreach (var logPath in availableLogs.Values)
-            {
-                _logReaderService.SubscribeToFileChanges(logPath, OnNewLogLine);
-            }
+            // 初始化可用的日志类型
+            InitializeAvailableLogTypes();
 
             // 启动监控
             StartMonitoring();
 
             // 初始加载
-            _ = LoadInitialLogsAsync();
-
-            // 初始化可用的日志类型
-            _ = InitializeAvailableLogTypesAsync();
+            _ = LoadLogsAsync();
         }
 
         #region Properties
@@ -85,6 +62,11 @@ namespace WinServiceManager.ViewModels
         public string ServiceName => _service.DisplayName;
 
         /// <summary>
+        /// 可用的日志类型列表
+        /// </summary>
+        public ObservableCollection<string> AvailableLogTypes { get; } = new();
+
+        /// <summary>
         /// 当前日志文件路径
         /// </summary>
         private string CurrentLogPath => _service.FindLogPath(SelectedLogType.ToLower() switch
@@ -92,18 +74,8 @@ namespace WinServiceManager.ViewModels
             "output" => "out",
             "error" => "err",
             "wrapper" => "wrapper",
-            _ => SelectedLogType.ToLower()
+            _ => throw new InvalidOperationException($"Unknown log type: {SelectedLogType}")
         }) ?? string.Empty;
-
-        /// <summary>
-        /// 输出日志路径
-        /// </summary>
-        public string OutputLogPath => _service.OutputLogPath;
-
-        /// <summary>
-        /// 错误日志路径
-        /// </summary>
-        public string ErrorLogPath => _service.ErrorLogPath;
 
         /// <summary>
         /// 日志文件大小
@@ -139,6 +111,8 @@ namespace WinServiceManager.ViewModels
             {
                 if (SetProperty(ref _selectedLogType, value))
                 {
+                    // 重新订阅文件变更
+                    UpdateFileSubscription();
                     _ = LoadLogsAsync();
                 }
             }
@@ -154,27 +128,12 @@ namespace WinServiceManager.ViewModels
         }
 
         /// <summary>
-        /// 过滤后的日志行集合
-        /// </summary>
-        public ObservableCollection<string> FilteredLogLines
-        {
-            get => _filteredLogLines;
-            private set => SetProperty(ref _filteredLogLines, value);
-        }
-
-        /// <summary>
         /// 是否正在监控
         /// </summary>
         public bool IsMonitoring
         {
             get => _isMonitoring;
-            private set
-            {
-                if (SetProperty(ref _isMonitoring, value))
-                {
-                    UpdateTimer();
-                }
-            }
+            private set => SetProperty(ref _isMonitoring, value);
         }
 
         /// <summary>
@@ -196,15 +155,6 @@ namespace WinServiceManager.ViewModels
         }
 
         /// <summary>
-        /// 是否显示过滤栏
-        /// </summary>
-        public bool ShowFilterBar
-        {
-            get => _showFilterBar;
-            set => SetProperty(ref _showFilterBar, value);
-        }
-
-        /// <summary>
         /// 过滤文本
         /// </summary>
         public string FilterText
@@ -220,15 +170,6 @@ namespace WinServiceManager.ViewModels
         }
 
         /// <summary>
-        /// 是否应用了过滤器
-        /// </summary>
-        public bool IsFilterApplied
-        {
-            get => _isFilterApplied;
-            private set => SetProperty(ref _isFilterApplied, value);
-        }
-
-        /// <summary>
         /// 最大行数
         /// </summary>
         public int MaxLines
@@ -239,21 +180,6 @@ namespace WinServiceManager.ViewModels
                 if (SetProperty(ref _maxLines, Math.Max(100, value)))
                 {
                     TrimLogLines();
-                }
-            }
-        }
-
-        /// <summary>
-        /// 刷新间隔（秒）
-        /// </summary>
-        public int RefreshInterval
-        {
-            get => _refreshInterval;
-            set
-            {
-                if (SetProperty(ref _refreshInterval, Math.Max(1, Math.Min(60, value))))
-                {
-                    UpdateTimer();
                 }
             }
         }
@@ -287,7 +213,7 @@ namespace WinServiceManager.ViewModels
         }
 
         [RelayCommand]
-        private async Task ClearLogs()
+        private async Task ClearLogsAsync()
         {
             if (MessageBox.Show(
                 "确定要清空当前日志文件吗？\n\n此操作不可恢复。",
@@ -307,7 +233,6 @@ namespace WinServiceManager.ViewModels
                 if (success)
                 {
                     LogLines.Clear();
-                    FilteredLogLines.Clear();
                     Status = "日志已清空";
                 }
                 else
@@ -343,7 +268,7 @@ namespace WinServiceManager.ViewModels
                 if (saveDialog.ShowDialog() == true)
                 {
                     Status = "正在保存...";
-                    await File.WriteAllLinesAsync(saveDialog.FileName, FilteredLogLines);
+                    await File.WriteAllLinesAsync(saveDialog.FileName, GetFilteredLines());
                     Status = "已保存";
 
                     MessageBox.Show(
@@ -366,71 +291,16 @@ namespace WinServiceManager.ViewModels
         }
 
         [RelayCommand]
-        private void ToggleFilterBar()
-        {
-            ShowFilterBar = !ShowFilterBar;
-        }
-
-        [RelayCommand]
-        private void ApplyFilter()
-        {
-            if (!string.IsNullOrWhiteSpace(FilterText))
-            {
-                var filtered = LogLines.Where(line =>
-                    line.Contains(FilterText, StringComparison.OrdinalIgnoreCase)).ToList();
-
-                FilteredLogLines.Clear();
-                foreach (var line in filtered)
-                {
-                    FilteredLogLines.Add(line);
-                }
-
-                IsFilterApplied = true;
-            }
-            else
-            {
-                ClearFilter();
-            }
-
-            OnPropertyChanged(nameof(FilteredLogLines));
-            LastUpdated = DateTime.Now;
-        }
-
-        [RelayCommand]
-        private void ClearFilter()
-        {
-            FilterText = string.Empty;
-            FilteredLogLines.Clear();
-            foreach (var line in LogLines)
-            {
-                FilteredLogLines.Add(line);
-            }
-            IsFilterApplied = false;
-            OnPropertyChanged(nameof(FilteredLogLines));
-        }
-
-        [RelayCommand]
-        private void IncreaseMaxLines()
-        {
-            MaxLines += 500;
-        }
-
-        [RelayCommand]
-        private void DecreaseMaxLines()
-        {
-            MaxLines = Math.Max(100, MaxLines - 500);
-        }
-
-        [RelayCommand]
         private void ToggleMonitoring()
         {
+            IsMonitoring = !IsMonitoring;
             if (IsMonitoring)
             {
-                StopMonitoring();
+                StartMonitoring();
             }
             else
             {
-                StartMonitoring();
+                StopMonitoring();
             }
         }
 
@@ -450,39 +320,26 @@ namespace WinServiceManager.ViewModels
         /// <summary>
         /// 初始化可用的日志类型
         /// </summary>
-        private async Task InitializeAvailableLogTypesAsync()
+        private void InitializeAvailableLogTypes()
         {
-            try
+            var availableLogs = _service.GetAvailableLogs();
+
+            AvailableLogTypes.Clear();
+
+            // 按优先级添加：Output -> Error -> Wrapper
+            if (availableLogs.ContainsKey("Output"))
+                AvailableLogTypes.Add("Output");
+
+            if (availableLogs.ContainsKey("Error"))
+                AvailableLogTypes.Add("Error");
+
+            if (availableLogs.ContainsKey("Wrapper"))
+                AvailableLogTypes.Add("Wrapper");
+
+            // 设置默认选中的日志类型
+            if (AvailableLogTypes.Count > 0)
             {
-                await Task.Run(() =>
-                {
-                    var availableLogs = _service.GetAvailableLogs();
-
-                    App.Current.Dispatcher.Invoke(() =>
-                    {
-                        AvailableLogTypes.Clear();
-
-                        // 按优先级添加：Output -> Error -> Wrapper
-                        if (availableLogs.ContainsKey("Output"))
-                            AvailableLogTypes.Add("Output");
-
-                        if (availableLogs.ContainsKey("Error"))
-                            AvailableLogTypes.Add("Error");
-
-                        if (availableLogs.ContainsKey("Wrapper"))
-                            AvailableLogTypes.Add("Wrapper");
-
-                        // 如果当前选中的日志类型不可用，切换到第一个可用的
-                        if (!AvailableLogTypes.Contains(SelectedLogType) && AvailableLogTypes.Any())
-                        {
-                            SelectedLogType = AvailableLogTypes.First();
-                        }
-                    });
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "初始化可用日志类型失败");
+                SelectedLogType = AvailableLogTypes[0];
             }
         }
 
@@ -492,56 +349,49 @@ namespace WinServiceManager.ViewModels
         private void StartMonitoring()
         {
             IsMonitoring = true;
-            _monitorTask = MonitorLogAsync(_cancellationTokenSource.Token);
+            UpdateFileSubscription();
+            Status = "监控中";
         }
 
         /// <summary>
         /// 停止监控
         /// </summary>
-        public void StopMonitoring()
+        private void StopMonitoring()
         {
             IsMonitoring = false;
-            _cancellationTokenSource.Cancel();
+            UnsubscribeFromFile();
+            Status = "已停止";
+        }
 
-            try
+        /// <summary>
+        /// 更新文件订阅
+        /// </summary>
+        private void UpdateFileSubscription()
+        {
+            if (!IsMonitoring)
+                return;
+
+            // 取消旧的订阅
+            UnsubscribeFromFile();
+
+            // 订阅新的文件
+            if (!string.IsNullOrEmpty(CurrentLogPath))
             {
-                _monitorTask?.Wait(TimeSpan.FromSeconds(5));
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error stopping log monitoring: {ex.Message}");
+                _logReaderService.SubscribeToFileChanges(CurrentLogPath, OnNewLogLine);
             }
         }
 
         /// <summary>
-        /// 监控日志变更
+        /// 取消文件订阅
         /// </summary>
-        private async Task MonitorLogAsync(CancellationToken cancellationToken)
+        private void UnsubscribeFromFile()
         {
-            try
+            // 取消所有可能的日志文件订阅
+            var availableLogs = _service.GetAvailableLogs();
+            foreach (var logPath in availableLogs.Values)
             {
-                await _logReaderService.MonitorNewLinesAsync(CurrentLogPath, cancellationToken);
+                _logReaderService.UnsubscribeFromFileChanges(logPath);
             }
-            catch (OperationCanceledException)
-            {
-                // 正常取消，不需要处理
-            }
-            catch (Exception ex)
-            {
-                App.Current.Dispatcher.Invoke(() =>
-                {
-                    Status = "监控错误";
-                    System.Diagnostics.Debug.WriteLine($"Log monitoring error: {ex.Message}");
-                });
-            }
-        }
-
-        /// <summary>
-        /// 加载初始日志
-        /// </summary>
-        private async Task LoadInitialLogsAsync()
-        {
-            await LoadLogsAsync();
         }
 
         /// <summary>
@@ -580,11 +430,10 @@ namespace WinServiceManager.ViewModels
             catch (Exception ex)
             {
                 Status = "错误";
-                App.Current.Dispatcher.Invoke(() =>
+                await App.Current.Dispatcher.InvokeAsync(() =>
                 {
                     LogLines.Clear();
                     LogLines.Add($"加载日志失败: {ex.Message}");
-                    ApplyFilter();
                 });
             }
             finally
@@ -604,23 +453,13 @@ namespace WinServiceManager.ViewModels
             App.Current.Dispatcher.Invoke(() =>
             {
                 LogLines.Add(newLine);
-
-                // 如果没有过滤器或新行匹配过滤器
-                if (!IsFilterApplied || string.IsNullOrWhiteSpace(FilterText) ||
-                    newLine.Contains(FilterText, StringComparison.OrdinalIgnoreCase))
-                {
-                    FilteredLogLines.Add(newLine);
-                }
-
-                // 限制最大行数
                 TrimLogLines();
-
-                // 更新状态
                 Status = "监控中";
                 LastUpdated = DateTime.Now;
 
-                // 请求滚动到底部
-                if (AutoScroll)
+                // 如果没有过滤器或新行匹配过滤器，请求滚动
+                if (AutoScroll && (string.IsNullOrWhiteSpace(FilterText) ||
+                    newLine.Contains(FilterText, StringComparison.OrdinalIgnoreCase)))
                 {
                     ScrollToBottomRequested?.Invoke(this, EventArgs.Empty);
                 }
@@ -628,6 +467,28 @@ namespace WinServiceManager.ViewModels
                 OnPropertyChanged(nameof(LogFileSize));
                 OnPropertyChanged(nameof(LastModified));
             });
+        }
+
+        /// <summary>
+        /// 应用过滤器
+        /// </summary>
+        private void ApplyFilter()
+        {
+            OnPropertyChanged(nameof(LogLines));
+            LastUpdated = DateTime.Now;
+        }
+
+        /// <summary>
+        /// 获取过滤后的行
+        /// </summary>
+        private IEnumerable<string> GetFilteredLines()
+        {
+            if (string.IsNullOrWhiteSpace(FilterText))
+            {
+                return LogLines;
+            }
+            return LogLines.Where(line =>
+                line.Contains(FilterText, StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>
@@ -639,37 +500,6 @@ namespace WinServiceManager.ViewModels
             {
                 LogLines.RemoveAt(0);
             }
-
-            while (FilteredLogLines.Count > MaxLines)
-            {
-                FilteredLogLines.RemoveAt(0);
-            }
-        }
-
-        /// <summary>
-        /// 更新定时器
-        /// </summary>
-        private void UpdateTimer()
-        {
-            if (IsMonitoring)
-            {
-                _refreshTimer.Change(TimeSpan.FromSeconds(RefreshInterval), TimeSpan.FromSeconds(RefreshInterval));
-            }
-            else
-            {
-                _refreshTimer.Change(Timeout.Infinite, Timeout.Infinite);
-            }
-        }
-
-        /// <summary>
-        /// 定时器回调
-        /// </summary>
-        private async void OnRefreshTimer(object? state)
-        {
-            if (!IsMonitoring || IsLoading)
-                return;
-
-            await LoadLogsAsync();
         }
 
         #endregion
@@ -679,16 +509,6 @@ namespace WinServiceManager.ViewModels
         public void Dispose()
         {
             StopMonitoring();
-
-            _refreshTimer?.Dispose();
-            _cancellationTokenSource?.Dispose();
-
-            // 取消所有日志文件的监控
-            var availableLogs = _service.GetAvailableLogs();
-            foreach (var logPath in availableLogs.Values)
-            {
-                _logReaderService.UnsubscribeFromFileChanges(logPath);
-            }
         }
 
         #endregion
