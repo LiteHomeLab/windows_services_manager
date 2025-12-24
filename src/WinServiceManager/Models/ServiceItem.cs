@@ -253,6 +253,65 @@ namespace WinServiceManager.Models
         );
 
         /// <summary>
+        /// 根据后缀类型查找日志文件
+        /// </summary>
+        /// <param name="logType">日志类型: "out", "err", "wrapper"</param>
+        /// <returns>匹配的日志文件路径，如果不存在则返回空字符串</returns>
+        public string FindLogPath(string logType)
+        {
+            try
+            {
+                if (!Directory.Exists(LogDirectory))
+                    return string.Empty;
+
+                var pattern = $"*.{logType}.log";
+                var files = Directory.GetFiles(LogDirectory, pattern);
+
+                return files.FirstOrDefault() ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// 获取所有可用的日志文件
+        /// </summary>
+        /// <returns>日志类型到文件路径的字典</returns>
+        public Dictionary<string, string> GetAvailableLogs()
+        {
+            var result = new Dictionary<string, string>();
+
+            try
+            {
+                if (!Directory.Exists(LogDirectory))
+                    return result;
+
+                // 查找 *.out.log
+                var outLog = FindLogPath("out");
+                if (!string.IsNullOrEmpty(outLog))
+                    result["Output"] = outLog;
+
+                // 查找 *.err.log
+                var errLog = FindLogPath("err");
+                if (!string.IsNullOrEmpty(errLog))
+                    result["Error"] = errLog;
+
+                // 查找 *.wrapper.log
+                var wrapperLog = FindLogPath("wrapper");
+                if (!string.IsNullOrEmpty(wrapperLog))
+                    result["Wrapper"] = wrapperLog;
+            }
+            catch
+            {
+                // 忽略异常，返回空字典
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// 生成完整的启动参数（包含脚本路径）
         /// </summary>
         public string GetFullArguments()
