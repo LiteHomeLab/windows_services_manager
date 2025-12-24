@@ -83,7 +83,7 @@
                         <CheckBox Content="自动滚动"
                                   IsChecked="{Binding AutoScroll}"/>
                         <CheckBox Content="监控"
-                                  IsChecked="{Binding IsMonitoring}"
+                                  IsChecked="{Binding IsMonitoring, Mode=OneWay}"
                                   Command="{Binding ToggleMonitoringCommand}"
                                   Margin="10,0,0,0"/>
                     </StackPanel>
