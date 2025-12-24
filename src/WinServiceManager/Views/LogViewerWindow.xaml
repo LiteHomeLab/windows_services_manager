@@ -94,11 +94,14 @@
                     <!-- 日志类型选择 -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal">
                         <TextBlock Text="日志类型:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <RadioButton Content="输出日志"
+                        <RadioButton Content="输出日志 (*.out.log)"
                                      IsChecked="{Binding SelectedLogType, Converter={StaticResource StringToBooleanConverter}, ConverterParameter=Output}"
                                      Margin="0,0,15,0"/>
-                        <RadioButton Content="错误日志"
-                                     IsChecked="{Binding SelectedLogType, Converter={StaticResource StringToBooleanConverter}, ConverterParameter=Error}"/>
+                        <RadioButton Content="错误日志 (*.err.log)"
+                                     IsChecked="{Binding SelectedLogType, Converter={StaticResource StringToBooleanConverter}, ConverterParameter=Error}"
+                                     Margin="0,0,15,0"/>
+                        <RadioButton Content="包装器日志 (*.wrapper.log)"
+                                     IsChecked="{Binding SelectedLogType, Converter={StaticResource StringToBooleanConverter}, ConverterParameter=Wrapper}"/>
                     </StackPanel>
 
                     <!-- 选项 -->
