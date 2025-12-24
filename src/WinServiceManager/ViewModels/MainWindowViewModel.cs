@@ -51,6 +51,7 @@ namespace WinServiceManager.ViewModels
         private readonly ServicePollingCoordinator _pollingCoordinator;
         private readonly LogReaderService _logReaderService;
         private readonly ILogger<MainWindowViewModel> _logger;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly ServiceDependencyValidator _dependencyValidator;
         private string _statusMessage = "就绪";
         private ServiceItemViewModel? _selectedService;
@@ -143,6 +144,7 @@ namespace WinServiceManager.ViewModels
             ServicePollingCoordinator pollingCoordinator,
             LogReaderService logReaderService,
             ILogger<MainWindowViewModel> logger,
+            ILoggerFactory loggerFactory,
             ServiceDependencyValidator dependencyValidator)
         {
             _serviceManager = serviceManager ?? throw new ArgumentNullException(nameof(serviceManager));
@@ -150,6 +152,7 @@ namespace WinServiceManager.ViewModels
             _pollingCoordinator = pollingCoordinator ?? throw new ArgumentNullException(nameof(pollingCoordinator));
             _logReaderService = logReaderService ?? throw new ArgumentNullException(nameof(logReaderService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             _dependencyValidator = dependencyValidator ?? throw new ArgumentNullException(nameof(dependencyValidator));
 
             // 订阅全局状态更新（ServiceStatusMonitor 的 30秒轮询）
@@ -502,7 +505,10 @@ namespace WinServiceManager.ViewModels
                 StatusMessage = $"准备查看 {SelectedService.DisplayName} 的日志...";
 
                 // 创建 ViewModel
-                var logViewModel = new LogViewerViewModel(_logReaderService, SelectedService.Service);
+                var logViewModel = new LogViewerViewModel(
+                    _logReaderService,
+                    SelectedService.Service,
+                    _loggerFactory.CreateLogger<LogViewerViewModel>());
 
                 // 创建并显示窗口
                 var logWindow = new LogViewerWindow(SelectedService.Service, logViewModel)
@@ -669,7 +675,10 @@ namespace WinServiceManager.ViewModels
                 StatusMessage = $"准备查看 {service.DisplayName} 的日志...";
 
                 // 创建 ViewModel
-                var logViewModel = new LogViewerViewModel(_logReaderService, service);
+                var logViewModel = new LogViewerViewModel(
+                    _logReaderService,
+                    service,
+                    _loggerFactory.CreateLogger<LogViewerViewModel>());
 
                 // 创建并显示窗口
                 var logWindow = new LogViewerWindow(service, logViewModel)

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using System;
 using System.Collections.ObjectModel;
@@ -20,6 +21,7 @@ namespace WinServiceManager.ViewModels
     {
         private readonly LogReaderService _logReaderService;
         private readonly ServiceItem _service;
+        private readonly ILogger<LogViewerViewModel> _logger;
         private readonly System.Threading.Timer _refreshTimer;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private Task? _monitorTask;
@@ -27,6 +29,11 @@ namespace WinServiceManager.ViewModels
         private string _selectedLogType = "Output";
         private ObservableCollection<string> _logLines = new();
         private ObservableCollection<string> _filteredLogLines = new();
+
+        /// <summary>
+        /// 可用的日志类型列表
+        /// </summary>
+        public ObservableCollection<string> AvailableLogTypes { get; } = new();
         private bool _isMonitoring = true;
         private bool _autoScroll = true;
         private bool _isLoading;
@@ -38,24 +45,31 @@ namespace WinServiceManager.ViewModels
         private string _status = "就绪";
         private DateTime _lastUpdated = DateTime.Now;
 
-        public LogViewerViewModel(LogReaderService logReaderService, ServiceItem service)
+        public LogViewerViewModel(LogReaderService logReaderService, ServiceItem service, ILogger<LogViewerViewModel> logger)
         {
             _logReaderService = logReaderService ?? throw new ArgumentNullException(nameof(logReaderService));
             _service = service ?? throw new ArgumentNullException(nameof(service));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _cancellationTokenSource = new CancellationTokenSource();
 
             // 初始化定时器
             _refreshTimer = new Timer(OnRefreshTimer, null, Timeout.Infinite, Timeout.Infinite);
 
-            // 订阅文件变更
-            _logReaderService.SubscribeToFileChanges(OutputLogPath, OnNewLogLine);
-            _logReaderService.SubscribeToFileChanges(ErrorLogPath, OnNewLogLine);
+            // 根据可用的日志类型动态订阅
+            var availableLogs = _service.GetAvailableLogs();
+            foreach (var logPath in availableLogs.Values)
+            {
+                _logReaderService.SubscribeToFileChanges(logPath, OnNewLogLine);
+            }
 
             // 启动监控
             StartMonitoring();
 
             // 初始加载
             _ = LoadInitialLogsAsync();
+
+            // 初始化可用的日志类型
+            _ = InitializeAvailableLogTypesAsync();
         }
 
         #region Properties
@@ -73,12 +87,7 @@ namespace WinServiceManager.ViewModels
         /// <summary>
         /// 当前日志文件路径
         /// </summary>
-        private string CurrentLogPath => SelectedLogType switch
-        {
-            "Output" => _service.OutputLogPath,
-            "Error" => _service.ErrorLogPath,
-            _ => _service.OutputLogPath
-        };
+        private string CurrentLogPath => _service.FindLogPath(SelectedLogType.ToLower()) ?? string.Empty;
 
         /// <summary>
         /// 输出日志路径
@@ -433,6 +442,45 @@ namespace WinServiceManager.ViewModels
         #region Private Methods
 
         /// <summary>
+        /// 初始化可用的日志类型
+        /// </summary>
+        private async Task InitializeAvailableLogTypesAsync()
+        {
+            try
+            {
+                await Task.Run(() =>
+                {
+                    var availableLogs = _service.GetAvailableLogs();
+
+                    App.Current.Dispatcher.Invoke(() =>
+                    {
+                        AvailableLogTypes.Clear();
+
+                        // 按优先级添加：Output -> Error -> Wrapper
+                        if (availableLogs.ContainsKey("Output"))
+                            AvailableLogTypes.Add("Output");
+
+                        if (availableLogs.ContainsKey("Error"))
+                            AvailableLogTypes.Add("Error");
+
+                        if (availableLogs.ContainsKey("Wrapper"))
+                            AvailableLogTypes.Add("Wrapper");
+
+                        // 如果当前选中的日志类型不可用，切换到第一个可用的
+                        if (!AvailableLogTypes.Contains(SelectedLogType) && AvailableLogTypes.Any())
+                        {
+                            SelectedLogType = AvailableLogTypes.First();
+                        }
+                    });
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "初始化可用日志类型失败");
+            }
+        }
+
+        /// <summary>
         /// 启动监控
         /// </summary>
         private void StartMonitoring()
@@ -629,8 +677,12 @@ namespace WinServiceManager.ViewModels
             _refreshTimer?.Dispose();
             _cancellationTokenSource?.Dispose();
 
-            _logReaderService.UnsubscribeFromFileChanges(OutputLogPath);
-            _logReaderService.UnsubscribeFromFileChanges(ErrorLogPath);
+            // 取消所有日志文件的监控
+            var availableLogs = _service.GetAvailableLogs();
+            foreach (var logPath in availableLogs.Values)
+            {
+                _logReaderService.UnsubscribeFromFileChanges(logPath);
+            }
         }
 
         #endregion
