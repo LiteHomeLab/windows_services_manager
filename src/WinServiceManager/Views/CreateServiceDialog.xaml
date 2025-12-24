@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:converters="clr-namespace:WinServiceManager.Converters"
+        xmlns:viewModels="clr-namespace:WinServiceManager.ViewModels"
         mc:Ignorable="d"
         Title="创建新服务"
         Height="750" Width="800"
@@ -15,6 +16,7 @@
         <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+        <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
 
         <!-- DataGrid文本样式 -->
         <Style x:Key="DataGridTextCellStyle" TargetType="TextBlock">
@@ -69,10 +71,29 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="12"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="12"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="12"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- 可执行文件 -->
+                <!-- 服务类型选择 -->
                 <StackPanel Grid.Row="0" Orientation="Horizontal">
+                    <TextBlock Text="服务类型:" Width="90" VerticalAlignment="Center" Foreground="#333"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <RadioButton Content="可执行文件"
+                                     IsChecked="{Binding ServiceType, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static viewModels:ServiceType.Executable}}"
+                                     Margin="0,0,20,0"
+                                     IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBooleanConverter}}"/>
+                        <RadioButton Content="脚本文件"
+                                     IsChecked="{Binding ServiceType, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static viewModels:ServiceType.Script}}"
+                                     IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBooleanConverter}}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 可执行文件 (仅在可执行文件模式下显示) -->
+                <StackPanel Grid.Row="2" Orientation="Horizontal"
+                            Visibility="{Binding IsExecutableMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <TextBlock Text="可执行文件:" Width="90" VerticalAlignment="Center" Foreground="#333"/>
                     <TextBox Width="320"
                              Text="{Binding ExecutablePath, UpdateSourceTrigger=PropertyChanged}"
@@ -86,24 +107,40 @@
                     <TextBlock Text="*" Foreground="Red" Margin="5,0,0,0" VerticalAlignment="Center" FontSize="14"/>
                 </StackPanel>
 
-                <!-- 脚本文件 -->
-                <StackPanel Grid.Row="2" Orientation="Horizontal">
+                <!-- 解释器路径 (仅在脚本模式下显示) -->
+                <StackPanel Grid.Row="2" Orientation="Horizontal"
+                            Visibility="{Binding IsScriptMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Text="解释器路径:" Width="90" VerticalAlignment="Center" Foreground="#333"/>
+                    <TextBox Width="320"
+                             Text="{Binding ExecutablePath, UpdateSourceTrigger=PropertyChanged}"
+                             Padding="5"
+                             IsReadOnly="{Binding IsBusy}"/>
+                    <Button Content="浏览..."
+                            Command="{Binding BrowseExecutableCommand}"
+                            Width="60"
+                            Margin="8,0,0,0"
+                            Padding="5"/>
+                    <TextBlock Text="*" Foreground="Red" Margin="5,0,0,0" VerticalAlignment="Center" FontSize="14"/>
+                </StackPanel>
+
+                <!-- 脚本文件 (仅在脚本模式下显示) -->
+                <StackPanel Grid.Row="4" Orientation="Horizontal"
+                            Visibility="{Binding IsScriptMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <TextBlock Text="脚本文件:" Width="90" VerticalAlignment="Center" Foreground="#333"/>
                     <TextBox Width="320"
                              Text="{Binding ScriptPath, UpdateSourceTrigger=PropertyChanged}"
                              Padding="5"
-                             IsEnabled="{Binding IsScriptFileEnabled}"
                              IsReadOnly="{Binding IsBusy}"/>
                     <Button Content="浏览..."
                             Command="{Binding BrowseScriptCommand}"
                             Width="60"
                             Margin="8,0,0,0"
-                            Padding="5"
-                            IsEnabled="{Binding IsScriptFileEnabled}"/>
+                            Padding="5"/>
+                    <TextBlock Text="*" Foreground="Red" Margin="5,0,0,0" VerticalAlignment="Center" FontSize="14"/>
                 </StackPanel>
 
                 <!-- 启动参数 -->
-                <StackPanel Grid.Row="4" Orientation="Horizontal" VerticalAlignment="Top">
+                <StackPanel Grid.Row="6" Orientation="Horizontal" VerticalAlignment="Top">
                     <TextBlock Text="启动参数:" Width="90" VerticalAlignment="Center" Foreground="#333" Margin="0,5,0,0"/>
                     <TextBox Width="320"
                              Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}"
@@ -116,7 +153,7 @@
                 </StackPanel>
 
                 <!-- 工作目录 -->
-                <StackPanel Grid.Row="6" Orientation="Horizontal">
+                <StackPanel Grid.Row="8" Orientation="Horizontal">
                     <TextBlock Text="工作目录:" Width="90" VerticalAlignment="Center" Foreground="#333"/>
                     <TextBox Width="320"
                              Text="{Binding WorkingDirectory, UpdateSourceTrigger=PropertyChanged}"

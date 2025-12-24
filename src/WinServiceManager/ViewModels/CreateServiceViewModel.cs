@@ -14,6 +14,17 @@ using WinServiceManager.Services;
 namespace WinServiceManager.ViewModels
 {
     /// <summary>
+    /// 服务类型枚举
+    /// </summary>
+    public enum ServiceType
+    {
+        /// <summary>可执行文件</summary>
+        Executable,
+        /// <summary>脚本文件</summary>
+        Script
+    }
+
+    /// <summary>
     /// 创建服务的视图模型
     /// </summary>
     public partial class CreateServiceViewModel : BaseViewModel
@@ -22,6 +33,7 @@ namespace WinServiceManager.ViewModels
 
         private string _displayName = string.Empty;
         private string? _description = "Managed by WinServiceManager";
+        private ServiceType _serviceType = ServiceType.Executable;
         private string _executablePath = string.Empty;
         private string? _scriptPath;
         private string _arguments = string.Empty;
@@ -54,6 +66,43 @@ namespace WinServiceManager.ViewModels
         }
 
         #region Properties
+
+        /// <summary>
+        /// 服务类型
+        /// </summary>
+        public ServiceType ServiceType
+        {
+            get => _serviceType;
+            set
+            {
+                if (SetProperty(ref _serviceType, value))
+                {
+                    // 切换服务类型时，清空相关路径
+                    if (value == ServiceType.Executable)
+                    {
+                        ScriptPath = null;
+                    }
+                    else
+                    {
+                        // 切换到脚本模式时，清空可执行文件路径
+                        ExecutablePath = string.Empty;
+                    }
+
+                    OnPropertyChanged(nameof(IsExecutableMode));
+                    OnPropertyChanged(nameof(IsScriptMode));
+                }
+            }
+        }
+
+        /// <summary>
+        /// 是否为可执行文件模式
+        /// </summary>
+        public bool IsExecutableMode => ServiceType == ServiceType.Executable;
+
+        /// <summary>
+        /// 是否为脚本文件模式
+        /// </summary>
+        public bool IsScriptMode => ServiceType == ServiceType.Script;
 
         /// <summary>
         /// 服务显示名称
@@ -90,12 +139,6 @@ namespace WinServiceManager.ViewModels
             {
                 if (SetProperty(ref _executablePath, value))
                 {
-                    // 如果选择的是解释器（如 python.exe），自动启用脚本文件选项
-                    if (IsInterpreter(value))
-                    {
-                        OnPropertyChanged(nameof(IsScriptFileEnabled));
-                    }
-
                     // 自动设置工作目录为可执行文件所在目录
                     if (!string.IsNullOrEmpty(value))
                     {
@@ -177,11 +220,6 @@ namespace WinServiceManager.ViewModels
             get => _autoRestart;
             set => SetProperty(ref _autoRestart, value);
         }
-
-        /// <summary>
-        /// 是否脚本文件输入框可用
-        /// </summary>
-        public bool IsScriptFileEnabled => IsInterpreter(ExecutablePath);
 
         /// <summary>
         /// 是否正在执行操作
@@ -704,24 +742,28 @@ namespace WinServiceManager.ViewModels
                 errors.Add("服务名称长度必须在3-100个字符之间");
             }
 
-            // 验证可执行文件
+            // 验证可执行文件/解释器路径
             if (string.IsNullOrWhiteSpace(ExecutablePath))
             {
-                errors.Add("请选择可执行文件");
+                errors.Add(ServiceType == ServiceType.Script ? "请选择解释器" : "请选择可执行文件");
             }
             else if (!File.Exists(ExecutablePath))
             {
-                errors.Add("指定的可执行文件不存在");
+                errors.Add(ServiceType == ServiceType.Script ? "指定的解释器不存在" : "指定的可执行文件不存在");
             }
             else if (!PathValidator.IsValidPath(ExecutablePath))
             {
                 errors.Add("可执行文件路径包含非法字符");
             }
 
-            // 验证脚本文件（如果已填写）
-            if (!string.IsNullOrWhiteSpace(ScriptPath))
+            // 验证脚本文件（在脚本模式下必填）
+            if (ServiceType == ServiceType.Script)
             {
-                if (!File.Exists(ScriptPath))
+                if (string.IsNullOrWhiteSpace(ScriptPath))
+                {
+                    errors.Add("请选择脚本文件");
+                }
+                else if (!File.Exists(ScriptPath))
                 {
                     errors.Add("指定的脚本文件不存在");
                 }
