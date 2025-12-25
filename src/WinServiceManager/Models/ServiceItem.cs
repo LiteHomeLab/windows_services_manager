@@ -344,10 +344,42 @@ namespace WinServiceManager.Models
                 // 添加退出码自动重启配置
                 if (EnableRestartOnExit)
                 {
+                    // 当启用退出码重启时，使用包装脚本而不是直接启动目标程序
+                    // WinSW 启动 wrapper.bat，wrapper.bat 启动真正的目标程序
+                    // wrapper.bat 根据目标程序的退出码决定是否触发 WinSW 重启
+
+                    string wrapperPath = Path.Combine(ServiceDirectory, "wrapper.bat");
+                    string originalExecutable = ExecutablePath;
+                    string fullArguments = GetFullArguments();
+
+                    // 构建包装脚本的参数：目标程序 + 原始参数 + 重启退出码
+                    // 格式: wrapper.bat "executable" [args...] restart_exit_code
+                    string wrapperArguments = $"\"{originalExecutable}\"";
+                    if (!string.IsNullOrEmpty(fullArguments))
+                    {
+                        wrapperArguments += $" " + fullArguments;
+                    }
+                    wrapperArguments += $" {RestartExitCode}";
+
+                    // 修改 executable 元素指向包装脚本
+                    var execElement = serviceElement.Element("executable");
+                    if (execElement != null)
+                    {
+                        execElement.ReplaceWith(new XElement("executable", SecurityElement.Escape(wrapperPath)));
+                    }
+
+                    // 修改 arguments 元素为包装脚本参数
+                    var argsElement = serviceElement.Element("arguments");
+                    if (argsElement != null)
+                    {
+                        argsElement.ReplaceWith(new XElement("arguments", new XCData(wrapperArguments)));
+                    }
+
+                    // 添加标准的 onfailure 配置（任何非零退出码都触发重启）
+                    // wrapper.bat 会在目标程序返回 RestartExitCode 时返回 1（触发重启）
+                    // 在目标程序返回 0 或其他码时返回原退出码（不触发重启）
                     var onfailureElement = new XElement("onfailure",
-                        new XElement("restart",
-                            new XAttribute("restartExitCode", RestartExitCode)
-                        )
+                        new XElement("restart")
                     );
                     serviceElement.Add(onfailureElement);
                 }
