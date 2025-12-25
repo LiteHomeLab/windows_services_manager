@@ -491,7 +491,36 @@ namespace WinServiceManager.ViewModels
             try
             {
                 var fullArgs = Service.GetFullArguments();
-                Clipboard.SetText(fullArgs);
+
+                // 使用重试机制处理剪贴板被占用的情况
+                bool success = false;
+                int retryCount = 0;
+                const int maxRetries = 5;
+
+                while (!success && retryCount < maxRetries)
+                {
+                    try
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            Clipboard.SetText(fullArgs);
+                        });
+                        success = true;
+                    }
+                    catch (Exception)
+                    {
+                        retryCount++;
+                        if (retryCount < maxRetries)
+                        {
+                            // 等待 50ms 后重试
+                            Thread.Sleep(50);
+                        }
+                        else
+                        {
+                            throw;
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
