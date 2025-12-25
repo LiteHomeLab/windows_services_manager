@@ -152,6 +152,22 @@ namespace WinServiceManager.Services
 
                 File.Copy(_winswTemplatePath, service.WinSWExecutablePath, true);
 
+                // Copy wrapper script if restart on exit is enabled
+                if (service.EnableRestartOnExit)
+                {
+                    string wrapperTemplatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "templates", "wrapper.bat");
+
+                    if (!File.Exists(wrapperTemplatePath))
+                    {
+                        throw new FileNotFoundException($"Wrapper script template not found: {wrapperTemplatePath}");
+                    }
+
+                    string wrapperDestinationPath = Path.Combine(service.ServiceDirectory, "wrapper.bat");
+                    File.Copy(wrapperTemplatePath, wrapperDestinationPath, true);
+
+                    _logger.LogInformation("Wrapper script copied to: {WrapperPath}", wrapperDestinationPath);
+                }
+
                 // Generate and write configuration file
                 var config = service.GenerateWinSWConfig();
                 await File.WriteAllTextAsync(service.WinSWConfigPath, config);
