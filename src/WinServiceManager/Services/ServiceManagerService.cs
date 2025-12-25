@@ -80,13 +80,19 @@ namespace WinServiceManager.Services
 
             try
             {
-                // 先保存到数据存储
-                await _dataStorage.AddServiceAsync(service);
-
-                // 安装服务
+                // 先尝试安装服务，仅在成功后才保存到存储
                 var result = await _winswWrapper.InstallServiceAsync(service);
 
-                if (result.Success && request.AutoStart)
+                if (!result.Success)
+                {
+                    // 安装失败，不保存到存储
+                    return ServiceOperationResult<string>.FailureResult(ServiceOperationType.Install, result.ErrorMessage ?? "安装失败");
+                }
+
+                // 安装成功，保存到存储
+                await _dataStorage.AddServiceAsync(service);
+
+                if (request.AutoStart)
                 {
                     // 如果需要自动启动
                     var startResult = await _winswWrapper.StartServiceAsync(service);
@@ -99,33 +105,28 @@ namespace WinServiceManager.Services
                         service.Status = ServiceStatus.Stopped;
                     }
                 }
-                else if (result.Success)
-                {
-                    service.Status = ServiceStatus.Stopped;
-                }
                 else
                 {
-                    service.Status = ServiceStatus.Error;
+                    service.Status = ServiceStatus.Stopped;
                 }
 
                 // 更新状态
                 service.UpdatedAt = DateTime.Now;
                 await _dataStorage.UpdateServiceAsync(service);
 
-                if (result.Success)
-                {
-                    return ServiceOperationResult<string>.SuccessResult(service.Id, ServiceOperationType.Install);
-                }
-                else
-                {
-                    return ServiceOperationResult<string>.FailureResult(ServiceOperationType.Install, result.ErrorMessage ?? "安装失败");
-                }
+                return ServiceOperationResult<string>.SuccessResult(service.Id, ServiceOperationType.Install);
             }
             catch (Exception ex)
             {
-                service.Status = ServiceStatus.Error;
-                service.UpdatedAt = DateTime.Now;
-                await _dataStorage.UpdateServiceAsync(service);
+                // 如果已经保存到存储，尝试清理
+                try
+                {
+                    await _dataStorage.DeleteServiceAsync(service.Id);
+                }
+                catch
+                {
+                    // 忽略删除失败
+                }
 
                 return ServiceOperationResult<string>.FailureResult(ServiceOperationType.Install, ex.Message);
             }
@@ -210,6 +211,41 @@ namespace WinServiceManager.Services
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// 从数据存储中删除服务（无论是否已安装）
+        /// </summary>
+        /// <param name="serviceId">服务ID</param>
+        /// <returns>操作结果</returns>
+        public async Task<ServiceOperationResult> DeleteServiceAsync(string serviceId)
+        {
+            // 加载服务信息
+            var services = await _dataStorage.LoadServicesAsync();
+            var service = services.FirstOrDefault(s => s.Id == serviceId);
+
+            if (service == null)
+            {
+                return ServiceOperationResult.FailureResult(ServiceOperationType.Delete, $"服务ID {serviceId} 不存在");
+            }
+
+            // 禁止删除正在运行的服务
+            if (service.Status == ServiceStatus.Running)
+            {
+                return ServiceOperationResult.FailureResult(ServiceOperationType.Delete, "无法删除正在运行的服务，请先停止服务");
+            }
+
+            // 如果服务已安装，尝试卸载
+            if (service.Status != ServiceStatus.NotInstalled && service.Status != ServiceStatus.Error)
+            {
+                var uninstallResult = await _winswWrapper.UninstallServiceAsync(service);
+                // 即使卸载失败，也继续从存储中删除
+            }
+
+            // 从数据存储中删除
+            await _dataStorage.DeleteServiceAsync(serviceId);
+
+            return ServiceOperationResult.SuccessResult(ServiceOperationType.Delete);
         }
 
         /// <summary>

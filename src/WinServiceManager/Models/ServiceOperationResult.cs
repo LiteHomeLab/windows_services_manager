@@ -70,6 +70,7 @@ namespace WinServiceManager.Models
     {
         Install,
         Uninstall,
+        Delete,
         Start,
         Stop,
         Restart,

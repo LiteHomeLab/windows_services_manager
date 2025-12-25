@@ -575,6 +575,7 @@ namespace WinServiceManager.ViewModels
                 {
                     var viewModel = new ServiceItemViewModel(s, _serviceManager, _pollingCoordinator);
                     viewModel.EditRequested += OnServiceEditRequested;
+                    viewModel.DeleteRequested += OnServiceDeleteRequested;
                     return viewModel;
                 }).ToList();
 
@@ -622,6 +623,7 @@ namespace WinServiceManager.ViewModels
                         // 新服务，创建新的 ViewModel
                         var newViewModel = new ServiceItemViewModel(updatedService, _serviceManager, _pollingCoordinator);
                         newViewModel.EditRequested += OnServiceEditRequested;
+                        newViewModel.DeleteRequested += OnServiceDeleteRequested;
                         _allServices.Add(newViewModel);
                     }
                 }
@@ -740,6 +742,99 @@ namespace WinServiceManager.ViewModels
             }
         }
 
+        /// <summary>
+        /// 处理服务删除请求
+        /// </summary>
+        private async void OnServiceDeleteRequested(object? sender, ServiceItem service)
+        {
+            try
+            {
+                StatusMessage = $"准备删除 {service.DisplayName}...";
+
+                // 查找对应的 ServiceItemViewModel
+                var serviceViewModel = _allServices.FirstOrDefault(vm => vm.Service.Id == service.Id);
+                if (serviceViewModel == null)
+                {
+                    StatusMessage = "找不到要删除的服务";
+                    return;
+                }
+
+                // 检查服务是否可以删除
+                if (!serviceViewModel.CanDelete)
+                {
+                    var statusText = serviceViewModel.Status switch
+                    {
+                        ServiceStatus.Running => "运行中",
+                        _ => "忙碌状态"
+                    };
+
+                    MessageBox.Show(
+                        $"无法删除服务：服务当前状态为「{statusText}」。\n\n请先停止服务后再进行删除。",
+                        "无法删除",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    StatusMessage = "服务当前无法删除";
+                    await Task.Delay(2000);
+                    StatusMessage = "就绪";
+                    return;
+                }
+
+                // 显示确认对话框
+                var statusInfo = serviceViewModel.Status switch
+                {
+                    ServiceStatus.NotInstalled => "（未安装）",
+                    ServiceStatus.Error => "（错误状态）",
+                    ServiceStatus.Stopped => "（已停止）",
+                    _ => ""
+                };
+
+                var result = MessageBox.Show(
+                    $"确定要删除服务 '{service.DisplayName}' {statusInfo} 吗？\n\n此操作将:\n" +
+                    $"• 从列表中移除该服务\n" +
+                    $"• 删除所有相关配置文件\n\n" +
+                    $"此操作不可恢复。",
+                    "确认删除",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (result != MessageBoxResult.Yes)
+                {
+                    StatusMessage = "取消删除服务";
+                    await Task.Delay(1000);
+                    StatusMessage = "就绪";
+                    return;
+                }
+
+                // 执行删除
+                var deleteResult = await _serviceManager.DeleteServiceAsync(service.Id);
+
+                if (deleteResult.Success)
+                {
+                    StatusMessage = $"服务 '{service.DisplayName}' 已删除";
+                    await RefreshServicesAsync();
+                }
+                else
+                {
+                    StatusMessage = $"删除服务失败: {deleteResult.ErrorMessage}";
+                    MessageBox.Show(
+                        $"删除服务失败: {deleteResult.ErrorMessage}",
+                        "删除失败",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"删除服务失败: {ex.Message}";
+                MessageBox.Show($"删除服务时发生错误: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                await Task.Delay(2000);
+                StatusMessage = "就绪";
+            }
+        }
+
         #endregion
 
         #region Public Methods
@@ -809,12 +904,13 @@ namespace WinServiceManager.ViewModels
                 _statusMonitor?.Unsubscribe(OnServicesUpdated);
                 _pollingCoordinator.ServicesUpdated -= OnPollingCoordinatorServicesUpdated;
 
-                // 取消订阅EditRequested事件并释放资源
+                // 取消订阅事件并释放资源
                 foreach (var service in Services)
                 {
                     if (service is ServiceItemViewModel serviceViewModel)
                     {
                         serviceViewModel.EditRequested -= OnServiceEditRequested;
+                        serviceViewModel.DeleteRequested -= OnServiceDeleteRequested;
                     }
 
                     if (service is IDisposable disposableService)
@@ -828,6 +924,7 @@ namespace WinServiceManager.ViewModels
                     if (service is ServiceItemViewModel serviceViewModel)
                     {
                         serviceViewModel.EditRequested -= OnServiceEditRequested;
+                        serviceViewModel.DeleteRequested -= OnServiceDeleteRequested;
                     }
 
                     if (service is IDisposable disposableService)

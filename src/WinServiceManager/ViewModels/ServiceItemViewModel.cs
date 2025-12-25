@@ -40,6 +40,11 @@ namespace WinServiceManager.ViewModels
         /// </summary>
         public event EventHandler<ServiceItem>? EditRequested;
 
+        /// <summary>
+        /// 请求删除服务事件
+        /// </summary>
+        public event EventHandler<ServiceItem>? DeleteRequested;
+
         private readonly ServiceManagerService _serviceManager;
         private readonly ServicePollingCoordinator? _pollingCoordinator;
         private ServiceItem _service;
@@ -95,6 +100,7 @@ namespace WinServiceManager.ViewModels
                     OnPropertyChanged(nameof(CanStop));
                     OnPropertyChanged(nameof(CanRestart));
                     OnPropertyChanged(nameof(CanUninstall));
+                    OnPropertyChanged(nameof(CanDelete));
                     OnPropertyChanged(nameof(IsTransitioning));
                 }
             }
@@ -141,6 +147,7 @@ namespace WinServiceManager.ViewModels
                     OnPropertyChanged(nameof(CanStop));
                     OnPropertyChanged(nameof(CanRestart));
                     OnPropertyChanged(nameof(CanUninstall));
+                    OnPropertyChanged(nameof(CanDelete));
                 }
             }
         }
@@ -250,6 +257,11 @@ namespace WinServiceManager.ViewModels
         /// 是否可以编辑（只有停止的服务才能编辑）
         /// </summary>
         public bool CanEdit => !IsBusy && (Status == ServiceStatus.Stopped || Status == ServiceStatus.NotInstalled);
+
+        /// <summary>
+        /// 是否可以删除（不能删除正在运行的服务）
+        /// </summary>
+        public bool CanDelete => !IsBusy && Status != ServiceStatus.Running;
 
         /// <summary>
         /// 依赖服务显示文本
@@ -466,6 +478,13 @@ namespace WinServiceManager.ViewModels
             EditRequested?.Invoke(this, Service);
         }
 
+        [RelayCommand(CanExecute = nameof(CanDelete))]
+        private void Delete()
+        {
+            // 触发删除请求事件，由主窗口处理
+            DeleteRequested?.Invoke(this, Service);
+        }
+
         [RelayCommand]
         private void CopyArguments()
         {
@@ -538,6 +557,7 @@ namespace WinServiceManager.ViewModels
             RestartCommand.NotifyCanExecuteChanged();
             UninstallCommand.NotifyCanExecuteChanged();
             EditCommand.NotifyCanExecuteChanged();
+            DeleteCommand.NotifyCanExecuteChanged();
         }
 
         /// <summary>

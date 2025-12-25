@@ -763,6 +763,15 @@ namespace WinServiceManager.ViewModels
             {
                 errors.Add("服务名称长度必须在3-100个字符之间");
             }
+            else
+            {
+                // 验证服务名称唯一性（不区分大小写）
+                var existingServices = _serviceManager.GetAllServicesAsync().Result;
+                if (existingServices.Any(s => s.DisplayName.Equals(DisplayName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    errors.Add("服务名称已存在，请使用不同的名称");
+                }
+            }
 
             // 验证可执行文件/解释器路径
             if (string.IsNullOrWhiteSpace(ExecutablePath))

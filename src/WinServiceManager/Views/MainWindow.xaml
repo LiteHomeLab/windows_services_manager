@@ -27,6 +27,13 @@
                     <TextBlock Text="编辑服务"/>
                 </StackPanel>
             </Button>
+            <Button Command="{Binding SelectedService.DeleteCommand}"
+                    CommandParameter="{Binding SelectedService}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="🗑️" Margin="0,0,5,0"/>
+                    <TextBlock Text="删除服务"/>
+                </StackPanel>
+            </Button>
             <Separator/>
             <Label Content="过滤:" Margin="10,0,5,0" VerticalAlignment="Center"/>
             <ComboBox SelectedIndex="{Binding SelectedFilterIndex}" Width="100" MinWidth="80" Height="28">
