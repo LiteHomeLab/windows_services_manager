@@ -231,6 +231,8 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="12"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="12"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="90"/>
@@ -273,6 +275,25 @@
                              Padding="5"
                              IsReadOnly="{Binding IsBusy}"/>
                     <TextBlock Text="毫秒" Foreground="#666" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- 退出码重启配置 -->
+                <StackPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,5,0,0">
+                    <CheckBox Content="启用退出码自动重启"
+                              IsChecked="{Binding EnableRestartOnExit}"
+                              IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBooleanConverter}}"
+                              Margin="0,5,15,5"
+                              VerticalAlignment="Center"
+                              ToolTip="当程序返回指定的退出码时，WinSW 会自动重启程序"/>
+                    <TextBlock Text="退出码:" VerticalAlignment="Center" Margin="0,5,5,5" Foreground="#333"/>
+                    <TextBox Width="80"
+                             Text="{Binding RestartExitCode, UpdateSourceTrigger=PropertyChanged}"
+                             IsEnabled="{Binding EnableRestartOnExit}"
+                             Padding="5"
+                             IsReadOnly="{Binding IsBusy}"
+                             VerticalAlignment="Center"
+                             ToolTip="程序返回此退出码时触发重启（默认 99）"/>
+                    <TextBlock Text="（程序返回此退出码时将触发重启）" VerticalAlignment="Center" Foreground="#666" FontSize="11" Margin="8,5,0,5"/>
                 </StackPanel>
             </Grid>
         </GroupBox>
