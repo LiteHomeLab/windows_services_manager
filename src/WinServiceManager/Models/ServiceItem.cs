@@ -341,6 +341,17 @@ namespace WinServiceManager.Models
                 // 添加停止超时
                 serviceElement.Add(new XElement("stoptimeout", StopTimeout));
 
+                // 添加退出码自动重启配置
+                if (EnableRestartOnExit)
+                {
+                    var onfailureElement = new XElement("onfailure",
+                        new XElement("restart",
+                            new XAttribute("restartExitCode", RestartExitCode)
+                        )
+                    );
+                    serviceElement.Add(onfailureElement);
+                }
+
                 var doc = new XDocument(
                     new XDeclaration("1.0", "utf-8", null),
                     serviceElement
