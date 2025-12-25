@@ -81,6 +81,28 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
+REM Copy template files to output directory (for non-publish builds)
+echo Copying template files...
+
+REM Create templates directory in output
+if not exist "%BIN_OUTPUT%\templates" mkdir "%BIN_OUTPUT%\templates"
+
+REM Copy WinSW executable if exists
+if exist "%PROJECT_ROOT%src\WinServiceManager\templates\WinSW-x64.exe" (
+    copy "%PROJECT_ROOT%src\WinServiceManager\templates\WinSW-x64.exe" "%BIN_OUTPUT%\templates\WinSW-x64.exe" >nul
+    echo Copied WinSW executable
+) else (
+    echo Warning: WinSW executable not found at src\WinServiceManager\templates\WinSW-x64.exe
+)
+
+REM Copy wrapper.bat if exists
+if exist "%PROJECT_ROOT%src\WinServiceManager\templates\wrapper.bat" (
+    copy "%PROJECT_ROOT%src\WinServiceManager\templates\wrapper.bat" "%BIN_OUTPUT%\templates\wrapper.bat" >nul
+    echo Copied wrapper.bat template
+) else (
+    echo Warning: wrapper.bat not found at src\WinServiceManager\templates\wrapper.bat
+)
+
 REM Publish if requested
 if /i "%PUBLISH%"=="true" (
     echo Publishing application...
@@ -113,6 +135,14 @@ if /i "%PUBLISH%"=="true" (
         echo Copied WinSW executable
     ) else (
         echo Warning: WinSW executable not found at src\WinServiceManager\templates\WinSW-x64.exe
+    )
+
+    REM Copy wrapper.bat if exists
+    if exist "%PROJECT_ROOT%src\WinServiceManager\templates\wrapper.bat" (
+        copy "%PROJECT_ROOT%src\WinServiceManager\templates\wrapper.bat" "%PUBLISH_PATH%\templates\wrapper.bat" >nul
+        echo Copied wrapper.bat template
+    ) else (
+        echo Warning: wrapper.bat not found at src\WinServiceManager\templates\wrapper.bat
     )
 
     REM Create distribution package
