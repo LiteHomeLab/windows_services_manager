@@ -204,6 +204,19 @@ namespace WinServiceManager.Models
         public DateTime? LastStartupTime { get; set; }
 
         /// <summary>
+        /// 启用退出码自动重启功能
+        /// 当程序返回指定的退出码时，WinSW 会自动重启程序
+        /// </summary>
+        public bool EnableRestartOnExit { get; set; } = false;
+
+        /// <summary>
+        /// 触发重启的退出码（默认 99）
+        /// 程序返回此退出码时，WinSW 会自动重启程序
+        /// 返回 0 或其他退出码时，不会重启
+        /// </summary>
+        public int RestartExitCode { get; set; } = 99;
+
+        /// <summary>
         /// 服务目录路径
         /// </summary>
         public string ServiceDirectory => Path.Combine(
