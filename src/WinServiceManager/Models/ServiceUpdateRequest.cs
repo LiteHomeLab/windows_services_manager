@@ -77,5 +77,15 @@ namespace WinServiceManager.Models
         /// 停止超时时间（毫秒）
         /// </summary>
         public int StopTimeout { get; set; } = 15000;
+
+        /// <summary>
+        /// 启用退出码自动重启
+        /// </summary>
+        public bool EnableRestartOnExit { get; set; } = false;
+
+        /// <summary>
+        /// 触发重启的退出码
+        /// </summary>
+        public int RestartExitCode { get; set; } = 99;
     }
 }

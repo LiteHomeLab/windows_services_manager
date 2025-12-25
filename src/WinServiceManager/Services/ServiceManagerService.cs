@@ -73,7 +73,9 @@ namespace WinServiceManager.Services
                 EnvironmentVariables = request.EnvironmentVariables ?? new Dictionary<string, string>(),
                 ServiceAccount = request.ServiceAccount,
                 StartMode = ParseStartMode(request.StartMode),
-                StopTimeout = request.StopTimeout
+                StopTimeout = request.StopTimeout,
+                EnableRestartOnExit = request.EnableRestartOnExit,
+                RestartExitCode = request.RestartExitCode
             };
 
             try
@@ -310,6 +312,8 @@ namespace WinServiceManager.Services
                 existingService.ServiceAccount = request.ServiceAccount;
                 existingService.StartMode = ParseStartMode(request.StartMode);
                 existingService.StopTimeout = request.StopTimeout;
+                existingService.EnableRestartOnExit = request.EnableRestartOnExit;
+                existingService.RestartExitCode = request.RestartExitCode;
                 existingService.UpdatedAt = DateTime.Now;
 
                 // 确保服务目录存在

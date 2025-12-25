@@ -53,6 +53,8 @@ namespace WinServiceManager.ViewModels
         private string? _serviceAccount;
         private string _startMode = "Automatic";
         private int _stopTimeout = 15000;
+        private int _restartExitCode = 99;
+        private bool _enableRestartOnExit = false;
 
         public CreateServiceViewModel(
             ServiceManagerService serviceManager,
@@ -323,6 +325,24 @@ namespace WinServiceManager.ViewModels
         }
 
         /// <summary>
+        /// 启用退出码自动重启
+        /// </summary>
+        public bool EnableRestartOnExit
+        {
+            get => _enableRestartOnExit;
+            set => SetProperty(ref _enableRestartOnExit, value);
+        }
+
+        /// <summary>
+        /// 触发重启的退出码
+        /// </summary>
+        public int RestartExitCode
+        {
+            get => _restartExitCode;
+            set => SetProperty(ref _restartExitCode, value);
+        }
+
+        /// <summary>
         /// 是否选择了依赖服务
         /// </summary>
         public bool HasDependencies => SelectedDependencies.Any();
@@ -456,7 +476,9 @@ namespace WinServiceManager.ViewModels
                     EnvironmentVariables = EnvironmentVariables,
                     ServiceAccount = ServiceAccount,
                     StartMode = StartMode,
-                    StopTimeout = StopTimeout
+                    StopTimeout = StopTimeout,
+                    EnableRestartOnExit = EnableRestartOnExit,
+                    RestartExitCode = RestartExitCode
                 };
 
                 // 清理和验证参数
