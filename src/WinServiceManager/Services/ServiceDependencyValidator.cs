@@ -40,8 +40,9 @@ namespace WinServiceManager.Services
 
                 var result = new DependencyValidationResult { IsValid = true };
 
-                // 获取所有服务列表
-                allServices ??= await _serviceManager.GetAllServicesAsync();
+                // 获取所有服务列表（不检查实时状态，避免阻塞）
+                allServices ??= await _serviceManager.GetAllServicesWithoutStatusAsync()
+                    .ConfigureAwait(false);
 
                 // 1. 检查依赖服务是否存在
                 ValidateDependencyExistence(service, allServices, result);

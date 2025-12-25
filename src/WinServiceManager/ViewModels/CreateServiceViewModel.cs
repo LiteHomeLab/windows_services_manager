@@ -412,9 +412,9 @@ namespace WinServiceManager.ViewModels
         }
 
         [RelayCommand]
-        private void PreviewConfig()
+        private async Task PreviewConfig()
         {
-            if (!IsValid())
+            if (!await IsValidAsync().ConfigureAwait(false))
             {
                 ErrorMessage = "请先填写所有必填字段";
                 return;
@@ -446,7 +446,8 @@ namespace WinServiceManager.ViewModels
         [RelayCommand(CanExecute = nameof(CanCreate))]
         private async Task CreateAsync()
         {
-            if (!IsValid())
+            // 不使用 ConfigureAwait(false)，确保后续 UI 操作在 UI 线程执行
+            if (!await IsValidAsync())
             {
                 ErrorMessage = "请检查输入，确保所有必填字段都已正确填写";
                 return;
@@ -748,9 +749,9 @@ namespace WinServiceManager.ViewModels
         }
 
         /// <summary>
-        /// 验证输入
+        /// 验证输入（异步版本，避免死锁）
         /// </summary>
-        private bool IsValid()
+        private async Task<bool> IsValidAsync()
         {
             var errors = new List<string>();
 
@@ -766,7 +767,9 @@ namespace WinServiceManager.ViewModels
             else
             {
                 // 验证服务名称唯一性（不区分大小写）
-                var existingServices = _serviceManager.GetAllServicesAsync().Result;
+                // 使用 ConfigureAwait(false) 避免捕获同步上下文，防止死锁
+                var existingServices = await _serviceManager.GetAllServicesWithoutStatusAsync()
+                    .ConfigureAwait(false);
                 if (existingServices.Any(s => s.DisplayName.Equals(DisplayName, StringComparison.OrdinalIgnoreCase)))
                 {
                     errors.Add("服务名称已存在，请使用不同的名称");
@@ -848,7 +851,7 @@ namespace WinServiceManager.ViewModels
             // 如果显示预览，则重新生成
             if (ShowPreview)
             {
-                PreviewConfig();
+                _ = PreviewConfig();
             }
         }
 

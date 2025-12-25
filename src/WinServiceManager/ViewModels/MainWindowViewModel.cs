@@ -152,11 +152,15 @@ namespace WinServiceManager.ViewModels
             _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             _dependencyValidator = dependencyValidator ?? throw new ArgumentNullException(nameof(dependencyValidator));
 
-            // 订阅全局状态更新（ServiceStatusMonitor 的 30秒轮询）
+            // 订阅全局状态更新（ServiceStatusMonitor 的 5秒轮询）
             _statusMonitor.Subscribe(OnServicesUpdated);
+            _statusMonitor.StartMonitoring(intervalSeconds: 5);
 
             // 订阅协调器状态更新（操作后的高频轮询）
             _pollingCoordinator.ServicesUpdated += OnPollingCoordinatorServicesUpdated;
+
+            // 订阅服务配置变更事件
+            _serviceManager.ServiceConfigChanged += OnServiceConfigChanged;
 
             // 初始加载
             _ = RefreshServicesAsync();
@@ -607,7 +611,8 @@ namespace WinServiceManager.ViewModels
                     var existingViewModel = _allServices.FirstOrDefault(vm => vm.Service.Id == updatedService.Id);
                     if (existingViewModel != null)
                     {
-                        // 更新底层 Service 对象的属性（不包括状态，状态由协调器管理）
+                        // 更新底层 Service 对象的所有属性（包括状态）
+                        existingViewModel.Service.Status = updatedService.Status;
                         existingViewModel.Service.DisplayName = updatedService.DisplayName;
                         existingViewModel.Service.Description = updatedService.Description;
                         existingViewModel.Service.ExecutablePath = updatedService.ExecutablePath;
@@ -615,8 +620,12 @@ namespace WinServiceManager.ViewModels
                         existingViewModel.Service.WorkingDirectory = updatedService.WorkingDirectory;
                         existingViewModel.Service.UpdatedAt = updatedService.UpdatedAt;
 
+                        // 更新 ViewModel 的状态属性
+                        existingViewModel.UpdateStatus(updatedService.Status);
+
                         // 刷新显示
                         existingViewModel.RefreshProperties();
+                        existingViewModel.RefreshCommands();
                     }
                     else
                     {
@@ -835,6 +844,42 @@ namespace WinServiceManager.ViewModels
             }
         }
 
+        /// <summary>
+        /// 处理服务配置变更事件
+        /// </summary>
+        private async void OnServiceConfigChanged(ServiceItem updatedService)
+        {
+            _logger.LogInformation("服务配置已更新: ServiceId={ServiceId}, DisplayName={DisplayName}",
+                updatedService.Id, updatedService.DisplayName);
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                // 查找现有的 ServiceItemViewModel
+                var existingViewModel = _allServices.FirstOrDefault(vm => vm.Service.Id == updatedService.Id);
+                if (existingViewModel != null)
+                {
+                    // 更新底层 Service 对象的所有属性
+                    existingViewModel.Service.DisplayName = updatedService.DisplayName;
+                    existingViewModel.Service.Description = updatedService.Description;
+                    existingViewModel.Service.ExecutablePath = updatedService.ExecutablePath;
+                    existingViewModel.Service.ScriptPath = updatedService.ScriptPath;
+                    existingViewModel.Service.Arguments = updatedService.Arguments;
+                    existingViewModel.Service.WorkingDirectory = updatedService.WorkingDirectory;
+                    existingViewModel.Service.Dependencies = updatedService.Dependencies;
+                    existingViewModel.Service.EnvironmentVariables = updatedService.EnvironmentVariables;
+                    existingViewModel.Service.ServiceAccount = updatedService.ServiceAccount;
+                    existingViewModel.Service.StartMode = updatedService.StartMode;
+                    existingViewModel.Service.StopTimeout = updatedService.StopTimeout;
+                    existingViewModel.Service.EnableRestartOnExit = updatedService.EnableRestartOnExit;
+                    existingViewModel.Service.RestartExitCode = updatedService.RestartExitCode;
+                    existingViewModel.Service.UpdatedAt = updatedService.UpdatedAt;
+
+                    // 触发 UI 属性更新
+                    existingViewModel.RefreshProperties();
+                }
+            });
+        }
+
         #endregion
 
         #region Public Methods
@@ -903,6 +948,9 @@ namespace WinServiceManager.ViewModels
                 // 取消订阅状态监控
                 _statusMonitor?.Unsubscribe(OnServicesUpdated);
                 _pollingCoordinator.ServicesUpdated -= OnPollingCoordinatorServicesUpdated;
+
+                // 取消订阅服务配置变更事件
+                _serviceManager.ServiceConfigChanged -= OnServiceConfigChanged;
 
                 // 取消订阅事件并释放资源
                 foreach (var service in Services)

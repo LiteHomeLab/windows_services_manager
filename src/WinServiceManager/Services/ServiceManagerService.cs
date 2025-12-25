@@ -14,6 +14,11 @@ namespace WinServiceManager.Services
         private readonly WinSWWrapper _winswWrapper;
         private readonly IDataStorageService _dataStorage;
 
+        /// <summary>
+        /// 服务配置变更事件
+        /// </summary>
+        public event Action<ServiceItem>? ServiceConfigChanged;
+
         public ServiceManagerService(WinSWWrapper winswWrapper, IDataStorageService dataStorage)
         {
             _winswWrapper = winswWrapper;
@@ -56,6 +61,16 @@ namespace WinServiceManager.Services
             }
 
             return services;
+        }
+
+        /// <summary>
+        /// 获取所有服务（不检查实时状态，用于快速查询）
+        /// </summary>
+        /// <returns>服务列表</returns>
+        public async Task<List<ServiceItem>> GetAllServicesWithoutStatusAsync()
+        {
+            // 直接从存储加载，不检查实时状态
+            return await _dataStorage.LoadServicesAsync();
         }
 
         public async Task<ServiceOperationResult<string>> CreateServiceAsync(ServiceCreateRequest request)
@@ -269,30 +284,43 @@ namespace WinServiceManager.Services
         {
             try
             {
-                // 检查服务是否在Windows服务列表中
-                var sc = new ServiceController(service.Id);
-
-                switch (sc.Status)
+                // 使用 Task.Run 在后台线程执行状态检查，避免阻塞 UI 线程
+                // 添加 2 秒超时保护
+                var task = Task.Run(() =>
                 {
-                    case ServiceControllerStatus.Running:
-                        return ServiceStatus.Running;
-                    case ServiceControllerStatus.Stopped:
-                        return ServiceStatus.Stopped;
-                    case ServiceControllerStatus.StartPending:
-                        return ServiceStatus.Starting;
-                    case ServiceControllerStatus.StopPending:
-                        return ServiceStatus.Stopping;
-                    case ServiceControllerStatus.Paused:
-                        return ServiceStatus.Paused;
-                    case ServiceControllerStatus.PausePending:
-                        return ServiceStatus.Stopping;
-                    case ServiceControllerStatus.ContinuePending:
-                        return ServiceStatus.Starting;
-                    default:
-                        return ServiceStatus.Stopped;
+                    var sc = new ServiceController(service.Id);
+                    return sc.Status;
+                });
+
+                if (task.Wait(TimeSpan.FromSeconds(2)))
+                {
+                    switch (task.Result)
+                    {
+                        case ServiceControllerStatus.Running:
+                            return ServiceStatus.Running;
+                        case ServiceControllerStatus.Stopped:
+                            return ServiceStatus.Stopped;
+                        case ServiceControllerStatus.StartPending:
+                            return ServiceStatus.Starting;
+                        case ServiceControllerStatus.StopPending:
+                            return ServiceStatus.Stopping;
+                        case ServiceControllerStatus.Paused:
+                            return ServiceStatus.Paused;
+                        case ServiceControllerStatus.PausePending:
+                            return ServiceStatus.Stopping;
+                        case ServiceControllerStatus.ContinuePending:
+                            return ServiceStatus.Starting;
+                        default:
+                            return ServiceStatus.Stopped;
+                    }
+                }
+                else
+                {
+                    // 超时：返回上一个已知状态（如果有），否则返回 Stopped
+                    return service.Status;
                 }
             }
-            catch
+            catch (Exception)
             {
                 // 如果无法获取服务状态，可能是未安装
                 return ServiceStatus.NotInstalled;
@@ -364,6 +392,9 @@ namespace WinServiceManager.Services
 
                 // 更新数据存储
                 await _dataStorage.UpdateServiceAsync(existingService);
+
+                // 触发配置变更事件
+                ServiceConfigChanged?.Invoke(existingService);
 
                 return ServiceOperationResult.SuccessResult(ServiceOperationType.Update);
             }

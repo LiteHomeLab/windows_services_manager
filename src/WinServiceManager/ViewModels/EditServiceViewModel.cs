@@ -392,9 +392,9 @@ namespace WinServiceManager.ViewModels
         }
 
         [RelayCommand]
-        private void PreviewConfig()
+        private async Task PreviewConfig()
         {
-            if (!IsValid())
+            if (!await IsValidAsync().ConfigureAwait(false))
             {
                 ErrorMessage = "请先填写所有必填字段";
                 return;
@@ -439,11 +439,12 @@ namespace WinServiceManager.ViewModels
             bool isValid;
             try
             {
-                isValid = IsValid();
+                // 不使用 ConfigureAwait(false)，确保后续 UI 操作在 UI 线程执行
+                isValid = await IsValidAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "IsValid 方法抛出异常: ServiceId={ServiceId}", _originalId);
+                _logger.LogError(ex, "IsValidAsync 方法抛出异常: ServiceId={ServiceId}", _originalId);
                 ErrorMessage = $"验证时发生异常: {ex.Message}";
                 return;
             }
@@ -788,9 +789,9 @@ namespace WinServiceManager.ViewModels
         }
 
         /// <summary>
-        /// 验证输入
+        /// 验证输入（异步版本，避免死锁）
         /// </summary>
-        private bool IsValid()
+        private async Task<bool> IsValidAsync()
         {
             _logger.LogInformation("开始验证服务输入: ServiceId={ServiceId}", _originalId);
             var errors = new List<string>();
@@ -808,7 +809,9 @@ namespace WinServiceManager.ViewModels
             else
             {
                 // 验证服务名称唯一性（不区分大小写，排除当前编辑的服务）
-                var existingServices = _serviceManager.GetAllServicesAsync().Result;
+                // 使用 ConfigureAwait(false) 避免捕获同步上下文，防止死锁
+                var existingServices = await _serviceManager.GetAllServicesWithoutStatusAsync()
+                    .ConfigureAwait(false);
                 if (existingServices.Any(s => s.Id != _originalId && s.DisplayName.Equals(DisplayName, StringComparison.OrdinalIgnoreCase)))
                 {
                     errors.Add("服务名称已存在，请使用不同的名称");
@@ -931,7 +934,7 @@ namespace WinServiceManager.ViewModels
             // 如果显示预览，则重新生成
             if (ShowPreview)
             {
-                PreviewConfig();
+                _ = PreviewConfig();
             }
         }
 

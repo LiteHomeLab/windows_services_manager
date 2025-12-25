@@ -44,7 +44,13 @@ namespace WinServiceManager.Services
 
         public async Task<List<ServiceItem>> LoadServicesAsync()
         {
-            await _semaphore.WaitAsync();
+            // 添加 5 秒超时保护，防止无限等待
+            if (!await _semaphore.WaitAsync(TimeSpan.FromSeconds(5)))
+            {
+                _logger.LogWarning("获取信号量超时，返回空列表");
+                return new List<ServiceItem>();
+            }
+
             try
             {
                 _logger.LogDebug("Loading services from storage");

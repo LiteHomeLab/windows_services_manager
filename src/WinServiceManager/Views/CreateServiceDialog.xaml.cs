@@ -22,8 +22,12 @@ namespace WinServiceManager.Views
             // 订阅关闭事件
             viewModel.RequestClose += () =>
             {
-                DialogResult = true;
-                Close();
+                // 使用 Dispatcher.Invoke 确保在 UI 线程执行
+                Dispatcher.Invoke(() =>
+                {
+                    DialogResult = true;
+                    Close();
+                });
             };
         }
 
