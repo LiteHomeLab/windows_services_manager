@@ -101,15 +101,63 @@ namespace WinServiceManager
 
             logger.LogInformation("Administrator privileges verified");
 
-            // 启动性能监控
-            var performanceMonitor = _serviceProvider.GetRequiredService<IPerformanceMonitorService>();
-            performanceMonitor.StartMonitoring();
+            // 异步检查 WinSW 文件有效性
+            var winSWValidator = _serviceProvider.GetRequiredService<WinSWValidator>();
+            ValidateWinSWAsync(winSWValidator, logger, _serviceProvider);
+        }
 
-            // 创建并显示主窗口
-            var mainWindow = _serviceProvider.GetRequiredService<Views.MainWindow>();
-            mainWindow.Show();
+        /// <summary>
+        /// 异步验证 WinSW 文件
+        /// </summary>
+        private async void ValidateWinSWAsync(WinSWValidator validator, ILogger<App> logger, ServiceProvider serviceProvider)
+        {
+            try
+            {
+                var (isValid, errorMessage) = await validator.ValidateWinSWAsync().ConfigureAwait(false);
 
-            logger.LogInformation("Main window displayed successfully");
+                // 必须在 UI 线程上执行 UI 操作
+                Dispatcher.Invoke(() =>
+                {
+                    if (!isValid)
+                    {
+                        logger.LogError("WinSW validation failed: {ErrorMessage}", errorMessage);
+                        MessageBox.Show(
+                            validator.GetDownloadInstructions(),
+                            "WinSW 组件缺失或无效",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Error
+                        );
+                        Shutdown();
+                        return;
+                    }
+
+                    logger.LogInformation("WinSW validation passed");
+
+                    // 启动性能监控
+                    var performanceMonitor = serviceProvider.GetRequiredService<IPerformanceMonitorService>();
+                    performanceMonitor.StartMonitoring();
+
+                    // 创建并显示主窗口
+                    var mainWindow = serviceProvider.GetRequiredService<Views.MainWindow>();
+                    mainWindow.Show();
+
+                    logger.LogInformation("Main window displayed successfully");
+                });
+            }
+            catch (Exception ex)
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    logger.LogError(ex, "Fatal error during WinSW validation");
+                    MessageBox.Show(
+                        $"验证 WinSW 时发生严重错误: {ex.Message}",
+                        "严重错误",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error
+                    );
+                    Shutdown();
+                });
+            }
         }
 
         private void ConfigureServices(IServiceCollection services)
@@ -134,6 +182,7 @@ namespace WinServiceManager
 
             // 注册服务
             services.AddSingleton<IDataStorageService, JsonDataStorageService>();
+            services.AddSingleton<WinSWValidator>();
             services.AddSingleton<WinSWWrapper>();
             services.AddSingleton<ServiceManagerService>();
             services.AddSingleton<ServiceStatusMonitor>();

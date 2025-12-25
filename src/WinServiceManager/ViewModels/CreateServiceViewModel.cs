@@ -167,6 +167,16 @@ namespace WinServiceManager.ViewModels
             {
                 if (SetProperty(ref _scriptPath, value))
                 {
+                    // 自动设置工作目录为脚本文件所在目录
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        string? dir = Path.GetDirectoryName(value);
+                        if (!string.IsNullOrEmpty(dir))
+                        {
+                            WorkingDirectory = dir;
+                        }
+                    }
+
                     ValidateProperty();
                     OnPropertyChanged(nameof(CanCreate));
                 }

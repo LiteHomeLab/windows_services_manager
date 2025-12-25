@@ -12,10 +12,12 @@ namespace WinServiceManager.Services
     {
         private readonly string _winswTemplatePath;
         private readonly ILogger<WinSWWrapper> _logger;
+        private readonly WinSWValidator _validator;
 
-        public WinSWWrapper(ILogger<WinSWWrapper> logger)
+        public WinSWWrapper(ILogger<WinSWWrapper> logger, WinSWValidator validator)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _validator = validator ?? throw new ArgumentNullException(nameof(validator));
             _winswTemplatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "templates", "WinSW-x64.exe");
         }
 
@@ -144,10 +146,11 @@ namespace WinServiceManager.Services
                 Directory.CreateDirectory(service.ServiceDirectory);
                 Directory.CreateDirectory(service.LogDirectory);
 
-                // Copy WinSW executable safely
-                if (!File.Exists(_winswTemplatePath))
+                // Validate WinSW before copying
+                var (isValid, errorMessage) = await _validator.ValidateWinSWAsync().ConfigureAwait(false);
+                if (!isValid)
                 {
-                    throw new FileNotFoundException($"WinSW template not found: {_winswTemplatePath}");
+                    throw new InvalidOperationException($"WinSW validation failed: {errorMessage}");
                 }
 
                 File.Copy(_winswTemplatePath, service.WinSWExecutablePath, true);

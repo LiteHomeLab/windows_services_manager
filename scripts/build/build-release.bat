@@ -87,10 +87,17 @@ echo Copying template files...
 REM Create templates directory in output
 if not exist "%BIN_OUTPUT%\templates" mkdir "%BIN_OUTPUT%\templates"
 
-REM Copy WinSW executable if exists
-if exist "%PROJECT_ROOT%src\WinServiceManager\templates\WinSW-x64.exe" (
-    copy "%PROJECT_ROOT%src\WinServiceManager\templates\WinSW-x64.exe" "%BIN_OUTPUT%\templates\WinSW-x64.exe" >nul
-    echo Copied WinSW executable
+REM Copy WinSW executable if exists and is valid (size > 100KB)
+set "WINSW_SOURCE=%PROJECT_ROOT%src\WinServiceManager\templates\WinSW-x64.exe"
+if exist "%WINSW_SOURCE%" (
+    for %%A in ("%WINSW_SOURCE%") do set WINSW_SIZE=%%~zA
+    if !WINSW_SIZE! GTR 102400 (
+        copy "%WINSW_SOURCE%" "%BIN_OUTPUT%\templates\WinSW-x64.exe" >nul
+        echo Copied WinSW executable (!WINSW_SIZE! bytes)
+    ) else (
+        echo Warning: WinSW file exists but is too small (!WINSW_SIZE! bytes), possibly a placeholder
+        echo Please download the real WinSW-x64.exe from https://github.com/winsw/winsw/releases
+    )
 ) else (
     echo Warning: WinSW executable not found at src\WinServiceManager\templates\WinSW-x64.exe
 )
@@ -129,10 +136,17 @@ if /i "%PUBLISH%"=="true" (
     REM Create templates directory
     if not exist "%PUBLISH_PATH%\templates" mkdir "%PUBLISH_PATH%\templates"
 
-    REM Copy WinSW executable if exists
-    if exist "%PROJECT_ROOT%src\WinServiceManager\templates\WinSW-x64.exe" (
-        copy "%PROJECT_ROOT%src\WinServiceManager\templates\WinSW-x64.exe" "%PUBLISH_PATH%\templates\WinSW-x64.exe" >nul
-        echo Copied WinSW executable
+    REM Copy WinSW executable if exists and is valid (size > 100KB)
+    set "WINSW_SOURCE=%PROJECT_ROOT%src\WinServiceManager\templates\WinSW-x64.exe"
+    if exist "%WINSW_SOURCE%" (
+        for %%A in ("%WINSW_SOURCE%") do set WINSW_SIZE=%%~zA
+        if !WINSW_SIZE! GTR 102400 (
+            copy "%WINSW_SOURCE%" "%PUBLISH_PATH%\templates\WinSW-x64.exe" >nul
+            echo Copied WinSW executable (!WINSW_SIZE! bytes)
+        ) else (
+            echo Warning: WinSW file exists but is too small (!WINSW_SIZE! bytes), possibly a placeholder
+            echo Please download the real WinSW-x64.exe from https://github.com/winsw/winsw/releases
+        )
     ) else (
         echo Warning: WinSW executable not found at src\WinServiceManager\templates\WinSW-x64.exe
     )

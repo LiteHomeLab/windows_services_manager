@@ -52,6 +52,7 @@ src/
 │   ├── Services/                       # Business logic services
 │   │   ├── ServiceManagerService.cs   # Core service management
 │   │   ├── WinSWWrapper.cs            # WinSW command wrapper
+│   │   ├── WinSWValidator.cs          # WinSW file validation
 │   │   └── LogReaderService.cs        # Log monitoring
 │   ├── ViewModels/                     # MVVM view models
 │   ├── Views/                          # WPF views (XAML)
@@ -189,7 +190,9 @@ If logs are not being generated:
 - Administrator privileges (required and enforced)
 - WinSW-x64.exe (downloaded automatically or manually to templates/ directory)
 
-## WinSW Setup (First Time Only)
+## WinSW Setup (Required)
+
+The application requires a valid WinSW-x64.exe file to create Windows services. The WinSW executable must be a real WinSW binary (minimum 512KB), not a placeholder.
 
 ### Automatic Download (Recommended)
 ```bash
@@ -201,11 +204,16 @@ If logs are not being generated:
 ```
 
 ### Manual Download
-1. Download WinSW-x64.exe from: https://github.com/winsw/winsw/releases
+1. Download WinSW-x64.exe (v3.x or later) from: https://github.com/winsw/winsw/releases
 2. Place the file in: `src/WinServiceManager/templates/WinSW-x64.exe`
+3. **Important**: The file must be the actual WinSW executable (typically 1-2MB), not a placeholder
 
 ### Verification
-After setup, the application will verify WinSW availability on startup.
+- The application validates WinSW on startup
+- If WinSW is missing, invalid, or too small (< 512KB), the application will:
+  - Display an error dialog with download instructions
+  - Exit to prevent service creation failures
+- The build script checks file size and warns if copying a placeholder
 
 ## Important Notes
 - Always run as Administrator - the app validates this on startup

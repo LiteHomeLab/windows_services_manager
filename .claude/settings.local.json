@@ -5,7 +5,9 @@
       "Bash(Where-Object { $_ode -match \"d\" })",
       "Bash(Select-Object FullName)",
       "Bash(dotnet build:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(del:*)",
+      "Bash(powershell:*)"
     ]
   }
 }
