@@ -375,13 +375,9 @@ namespace WinServiceManager.Models
                         argsElement.ReplaceWith(new XElement("arguments", new XCData(wrapperArguments)));
                     }
 
-                    // 添加标准的 onfailure 配置（任何非零退出码都触发重启）
-                    // wrapper.bat 会在目标程序返回 RestartExitCode 时返回 1（触发重启）
-                    // 在目标程序返回 0 或其他码时返回原退出码（不触发重启）
-                    var onfailureElement = new XElement("onfailure",
-                        new XElement("restart")
-                    );
-                    serviceElement.Add(onfailureElement);
+                    // 注意：不添加 onfailure 元素
+                    // WinSW 默认会在包装脚本返回非零退出码时重启服务
+                    // wrapper.bat 已经处理了退出码转换逻辑
                 }
 
                 var doc = new XDocument(

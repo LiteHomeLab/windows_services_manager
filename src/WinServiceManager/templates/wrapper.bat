@@ -4,6 +4,10 @@ REM WinServiceManager Wrapper Script for Exit Code-Based Restart
 REM =============================================================================
 REM Usage: wrapper.bat "executable_path" [args...] restart_exit_code
 REM Example: wrapper.bat "C:\MyApp\app.exe" --port 8080 99
+REM
+REM This wrapper runs the target program in a loop:
+REM - If target exits with RESTART_CODE, restart it
+REM - If target exits with 0 or any other code, stop the service
 REM =============================================================================
 
 setlocal enabledelayedexpansion
@@ -80,31 +84,34 @@ if not exist "%TARGET_EXE%" (
 )
 
 REM ==============================================================================
-REM Log startup information
+REM Main restart loop
 REM =============================================================================
-echo [%DATE% %TIME%] Starting wrapper for: %TARGET_EXE% >> "%LOG_FILE%"
+echo [%DATE% %TIME%] Wrapper started for: %TARGET_EXE% >> "%LOG_FILE%"
+echo [%DATE% %TIME%] Restart exit code: %RESTART_CODE% >> "%LOG_FILE%"
 if defined TARGET_ARGS (
     echo [%DATE% %TIME%] Arguments: %TARGET_ARGS% >> "%LOG_FILE%"
 )
-echo [%DATE% %TIME%] Restart exit code: %RESTART_CODE% >> "%LOG_FILE%"
 
-REM ==============================================================================
-REM Execute target program and capture exit code
-REM =============================================================================
+:RESTART_LOOP
+echo [%DATE% %TIME%] ============================================ >> "%LOG_FILE%"
+echo [%DATE% %TIME%] Starting target program... >> "%LOG_FILE%"
 echo [%DATE% %TIME%] Executing: "%TARGET_EXE%" %TARGET_ARGS% >> "%LOG_FILE%"
+
+REM Execute target program and capture exit code
 "%TARGET_EXE%" %TARGET_ARGS%
 set "EXIT_CODE=%ERRORLEVEL%"
+
 echo [%DATE% %TIME%] Target exited with code: %EXIT_CODE% >> "%LOG_FILE%"
 
-REM ==============================================================================
-REM Determine wrapper exit code based on target exit code
-REM =============================================================================
+REM Check if exit code matches restart code
 if "%EXIT_CODE%"=="%RESTART_CODE%" (
-    echo [%DATE% %TIME%] Exit code matches restart code, triggering restart... >> "%LOG_FILE%"
-    endlocal
-    exit /b 1
-) else (
-    echo [%DATE% %TIME%] Exit code does not match restart code, exiting with %EXIT_CODE% >> "%LOG_FILE%"
-    endlocal
-    exit /b %EXIT_CODE%
+    echo [%DATE% %TIME%] Exit code matches restart code, restarting in 1 second... >> "%LOG_FILE%"
+    timeout /t 1 /nobreak >nul
+    goto RESTART_LOOP
 )
+
+REM Exit code doesn't match, stop the loop
+echo [%DATE% %TIME%] Exit code does not match restart code, stopping wrapper >> "%LOG_FILE%"
+echo [%DATE% %TIME%] Wrapper exiting with code: %EXIT_CODE% >> "%LOG_FILE%"
+endlocal
+exit /b %EXIT_CODE%
